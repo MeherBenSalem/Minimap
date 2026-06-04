@@ -17,25 +17,22 @@ public final class BiomeTint {
 
         var block = state.getBlock();
         Biome biome = level.getBiome(pos).value();
-        int tint = -1;
 
         if (block == Blocks.GRASS_BLOCK || block == Blocks.TALL_GRASS || block == Blocks.FERN) {
-            tint = biome.getGrassColor(pos.getX(), pos.getZ());
-        } else if (block == Blocks.OAK_LEAVES || block == Blocks.BIRCH_LEAVES
+            return 0xFF000000 | (biome.getGrassColor(pos.getX(), pos.getZ()) & 0xFFFFFF);
+        }
+        if (block == Blocks.OAK_LEAVES || block == Blocks.BIRCH_LEAVES
                 || block == Blocks.SPRUCE_LEAVES || block == Blocks.JUNGLE_LEAVES
                 || block == Blocks.ACACIA_LEAVES || block == Blocks.DARK_OAK_LEAVES
                 || block == Blocks.MANGROVE_LEAVES || block == Blocks.CHERRY_LEAVES
                 || block == Blocks.AZALEA_LEAVES || block == Blocks.FLOWERING_AZALEA_LEAVES
                 || state.getMapColor(level, pos) == MapColor.PLANT) {
-            tint = biome.getFoliageColor();
-        } else if (!state.getFluidState().isEmpty() || baseColor == MapColor.WATER) {
-            tint = biome.getWaterColor();
+            return 0xFF000000 | (biome.getFoliageColor() & 0xFFFFFF);
+        }
+        if (!state.getFluidState().isEmpty() || baseColor == MapColor.WATER) {
+            return 0xFF000000 | (biome.getWaterColor() & 0xFFFFFF);
         }
 
-        int rgb = ColorPalette.mapColorToRgb(baseColor, MapColor.Brightness.NORMAL);
-        if (tint != -1) {
-            return ColorPalette.applyBiomeTint(rgb, tint);
-        }
-        return rgb;
+        return ColorPalette.mapColorToRgb(baseColor, MapColor.Brightness.NORMAL);
     }
 }

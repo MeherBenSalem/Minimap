@@ -26,14 +26,10 @@ public final class BlockColorRegistry {
         if (mapColor == MapColor.NONE || mapColor == null) {
             return 0x00000000;
         }
-        int rgb = ColorPalette.mapColorToRgb(mapColor, brightness);
-        if (BlockOverrideConfig.getResolvedOverrides().containsKey(state)) {
-            return rgb;
-        }
-        return BiomeTint.tintColor(level, pos, state, mapColor);
+        return ColorPalette.mapColorToRgb(mapColor, brightness);
     }
 
     public static int moddedFallback(Level level, BlockPos pos, BlockState state) {
-        return BiomeTint.tintColor(level, pos, state, MapColor.byId(11));
+        return ColorPalette.mapColorToRgb(MapColor.byId(11), MapColor.Brightness.NORMAL);
     }
 }

@@ -30,6 +30,7 @@ public class OdysseyConfig {
     public static final ForgeConfigSpec.BooleanValue STICK_MARKERS_TO_BORDER;
     public static final ForgeConfigSpec.IntValue FULLSCREEN_DEFAULT_ZOOM;
     public static final ForgeConfigSpec.BooleanValue FULLSCREEN_SHOW_GRID;
+    public static final ForgeConfigSpec.BooleanValue SHOW_PLAYER_HEAD;
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
@@ -73,6 +74,10 @@ public class OdysseyConfig {
         builder.push("fullscreen");
         FULLSCREEN_DEFAULT_ZOOM = builder.defineInRange("defaultZoom", 1, 1, 16);
         FULLSCREEN_SHOW_GRID = builder.define("showGrid", true);
+        builder.pop();
+
+        builder.push("player");
+        SHOW_PLAYER_HEAD = builder.comment("Show 2D player head icon instead of a dot").define("showPlayerHead", true);
         builder.pop();
 
         SPEC = builder.build();

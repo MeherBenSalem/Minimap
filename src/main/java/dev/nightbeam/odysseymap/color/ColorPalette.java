@@ -36,19 +36,6 @@ public final class ColorPalette {
         return MapColor.Brightness.NORMAL;
     }
 
-    public static int applyBiomeTint(int rgb, int tintRgb) {
-        int ar = (rgb >> 16) & 0xFF;
-        int ag = (rgb >> 8) & 0xFF;
-        int ab = rgb & 0xFF;
-        int tr = (tintRgb >> 16) & 0xFF;
-        int tg = (tintRgb >> 8) & 0xFF;
-        int tb = tintRgb & 0xFF;
-        int r = ar * tr / 255;
-        int g = ag * tg / 255;
-        int b = ab * tb / 255;
-        return 0xFF000000 | (r << 16) | (g << 8) | b;
-    }
-
     public static int moddedFallbackRgb(net.minecraft.world.level.block.state.BlockState state) {
         int hash = state.getBlock().hashCode() ^ state.hashCode();
         int r = 40 + (hash & 0x7F);

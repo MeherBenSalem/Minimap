@@ -52,7 +52,7 @@ public class MinimapHudRenderer {
 
         float yaw = MapRenderMath.interpolatedYaw(partialTick);
         boolean headingUp = OdysseyConfig.ROTATION_MODE.get() == OdysseyConfig.RotationMode.HEADING_UP;
-        float rotation = headingUp ? -yaw : 0;
+        float rotation = headingUp ? (180 - yaw) : 0;
 
         graphics.pose().pushPose();
         graphics.pose().translate(x + size / 2.0f, y + size / 2.0f, 0);
@@ -68,7 +68,7 @@ public class MinimapHudRenderer {
 
         drawBorder(graphics, x, y, size);
         if (OdysseyConfig.SHOW_COMPASS.get()) {
-            drawCompass(graphics, x, y, size, headingUp ? yaw : 0);
+            drawCompass(graphics, x, y, size, headingUp ? (180 - yaw) : 0);
         }
 
         MarkerRenderer.renderHud(graphics, mc, x, y, size, partialTick, headingUp, yaw);

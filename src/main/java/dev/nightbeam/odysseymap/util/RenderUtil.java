@@ -1,6 +1,10 @@
 package dev.nightbeam.odysseymap.util;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.resources.ResourceLocation;
 
 public final class RenderUtil {
     private RenderUtil() {}
@@ -22,5 +26,23 @@ public final class RenderUtil {
 
     public static void drawMarkerDot(GuiGraphics graphics, int x, int y, int color, int size) {
         graphics.fill(x - size / 2, y - size / 2, x + size / 2, y + size / 2, color);
+    }
+
+    public static void drawPlayerHead(GuiGraphics graphics, int x, int y, int size) {
+        LocalPlayer lp = Minecraft.getInstance().player;
+        if (lp == null) {
+            drawMarkerDot(graphics, x, y, 0xFFFFFFFF, 5);
+            return;
+        }
+        ResourceLocation skin = lp.getSkinTextureLocation();
+        float scale = size / 8.0f;
+        RenderSystem.enableBlend();
+        RenderSystem.setShaderTexture(0, skin);
+        graphics.pose().pushPose();
+        graphics.pose().translate(x, y, 0);
+        graphics.pose().scale(scale, scale, 1);
+        graphics.blit(skin, -4, -4, 8, 8, 8f, 8f, 8, 8, 64, 64);
+        graphics.blit(skin, -4, -4, 8, 8, 40f, 8f, 8, 8, 64, 64);
+        graphics.pose().popPose();
     }
 }
