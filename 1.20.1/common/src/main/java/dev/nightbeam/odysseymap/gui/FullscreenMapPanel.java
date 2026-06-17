@@ -27,26 +27,27 @@ public class FullscreenMapPanel extends AbstractWidget {
 
         graphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0xE0101018);
 
-        double panX = parent.getPanX();
-        double panZ = parent.getPanZ();
-        int blocksPerPixel = parent.getBlocksPerPixel();
-
         var texture = OdysseyMapClient.getMinimapTexture();
-        texture.compose(mc, getWidth(), getHeight(), panX, panZ, false, blocksPerPixel);
-
         var tex = texture.getTextureLocation();
         if (tex != null) {
             int tw = texture.getTextureWidth();
             int th = texture.getTextureHeight();
             graphics.blit(tex, getX(), getY(), getWidth(), getHeight(), 0f, 0f, tw, th, tw, th);
+        } else {
+            String loading = "Loading map...";
+            int textW = mc.font.width(loading);
+            graphics.drawString(mc.font, loading,
+                    getX() + (getWidth() - textW) / 2,
+                    getY() + getHeight() / 2 - 4,
+                    0xFFAAAAAA, false);
         }
 
         if (OdysseyConfig.FULLSCREEN_SHOW_GRID.get()) {
-            drawGrid(graphics, blocksPerPixel);
+            drawGrid(graphics, parent.getBlocksPerPixel());
         }
 
         MarkerRenderer.renderFullscreen(graphics, mc, getX(), getY(), getWidth(), getHeight(),
-                panX, panZ, blocksPerPixel);
+                parent.getPanX(), parent.getPanZ(), parent.getBlocksPerPixel());
     }
 
     private void drawGrid(GuiGraphics graphics, int blocksPerPixel) {

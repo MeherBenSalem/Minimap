@@ -60,6 +60,8 @@ public final class MarkerStorage {
                         s.id != null ? UUID.fromString(s.id) : UUID.randomUUID(),
                         MarkerType.WAYPOINT, dim, s.x, y, s.z,
                         s.label != null ? s.label : "Waypoint", color);
+                if (s.visible != null) marker.setVisible(s.visible);
+                if (s.favorite != null) marker.setFavorite(s.favorite);
                 MarkerManager.get().addWaypointDirect(marker);
             }
         } catch (IOException e) {
@@ -79,6 +81,8 @@ public final class MarkerStorage {
         int z;
         String label;
         int color;
+        Boolean visible;
+        Boolean favorite;
 
         static StoredMarker from(Marker m) {
             StoredMarker s = new StoredMarker();
@@ -89,6 +93,8 @@ public final class MarkerStorage {
             s.z = m.getZ();
             s.label = m.getLabel();
             s.color = m.getColor();
+            s.visible = m.isVisible() ? null : false;
+            s.favorite = m.isFavorite() ? true : null;
             return s;
         }
     }

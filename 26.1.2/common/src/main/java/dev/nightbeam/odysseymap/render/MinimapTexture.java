@@ -12,8 +12,11 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MinimapTexture {
+    private static final Logger LOG = LoggerFactory.getLogger("OdysseyMap");
     private static final Identifier TEXTURE_ID =
             Identifier.fromNamespaceAndPath(OdysseyMapCommon.MOD_ID, "minimap");
     private static final int MAX_FULLSCREEN_DIM = 512;
@@ -24,12 +27,14 @@ public class MinimapTexture {
     private int textureWidth;
     private int textureHeight;
     private boolean needsUpload = true;
+    private boolean textureReady = false;
 
     public MinimapTexture(TileCache tileCache) {}
 
     public Identifier getTextureLocation() { return textureLocation; }
     public int getTextureWidth() { return textureWidth; }
     public int getTextureHeight() { return textureHeight; }
+    public boolean isTextureReady() { return textureReady; }
 
     public void compose(Minecraft mc, int size) {
         LocalPlayer player = mc.player;
@@ -76,7 +81,16 @@ public class MinimapTexture {
             }
         }
 
-        if (needsUpload) { dynamicTexture.upload(); needsUpload = false; }
+        if (needsUpload) {
+            try {
+                dynamicTexture.upload();
+                needsUpload = false;
+                textureReady = true;
+            } catch (Exception e) {
+                LOG.warn("Failed to upload minimap texture", e);
+                textureReady = false;
+            }
+        }
     }
 
     private void ensureTexture(int width, int height) {
@@ -87,7 +101,12 @@ public class MinimapTexture {
         image = new NativeImage(width, height, false);
         dynamicTexture = new DynamicTexture(() -> "odysseymap_minimap", image);
         textureLocation = TEXTURE_ID;
-        Minecraft.getInstance().getTextureManager().register(TEXTURE_ID, dynamicTexture);
+        try {
+            Minecraft.getInstance().getTextureManager().register(TEXTURE_ID, dynamicTexture);
+        } catch (Exception e) {
+            LOG.warn("Failed to register minimap texture", e);
+            textureReady = false;
+        }
     }
 
     public void clear() {
@@ -96,5 +115,6 @@ public class MinimapTexture {
         image = null;
         textureWidth = 0;
         textureHeight = 0;
+        textureReady = false;
     }
 }

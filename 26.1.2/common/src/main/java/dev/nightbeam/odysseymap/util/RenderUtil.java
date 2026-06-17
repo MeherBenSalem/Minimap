@@ -32,13 +32,22 @@ public final class RenderUtil {
             drawMarkerDot(graphics, x, y, 0xFFFFFFFF, 5);
             return;
         }
-        Identifier skin = lp.getSkin().body().texturePath();
-        float scale = size / 8.0f;
-        graphics.pose().pushMatrix();
-        graphics.pose().translate(x, y);
-        graphics.pose().scale(scale, scale);
-        graphics.blit(RenderPipelines.GUI_TEXTURED, skin, -4, -4, 8f, 8f, 8, 8, 8, 8, 64, 64);
-        graphics.blit(RenderPipelines.GUI_TEXTURED, skin, -4, -4, 40f, 8f, 8, 8, 8, 8, 64, 64);
-        graphics.pose().popMatrix();
+        try {
+            var skin = lp.getSkin();
+            if (skin == null || skin.body() == null || skin.body().texturePath() == null) {
+                drawMarkerDot(graphics, x, y, 0xFFFFFFFF, 5);
+                return;
+            }
+            Identifier tex = skin.body().texturePath();
+            float scale = size / 8.0f;
+            graphics.pose().pushMatrix();
+            graphics.pose().translate(x, y);
+            graphics.pose().scale(scale, scale);
+            graphics.blit(RenderPipelines.GUI_TEXTURED, tex, -4, -4, 8f, 8f, 8, 8, 8, 8, 64, 64);
+            graphics.blit(RenderPipelines.GUI_TEXTURED, tex, -4, -4, 40f, 8f, 8, 8, 8, 8, 64, 64);
+            graphics.pose().popMatrix();
+        } catch (Exception e) {
+            drawMarkerDot(graphics, x, y, 0xFFFFFFFF, 5);
+        }
     }
 }

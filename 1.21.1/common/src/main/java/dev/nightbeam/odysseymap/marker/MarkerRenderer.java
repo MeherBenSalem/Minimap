@@ -91,29 +91,37 @@ public final class MarkerRenderer {
         int cy = mapY + mapH / 2;
         int bpp = Math.max(1, blocksPerPixel);
 
-        double playerDx = (player.getX() - centerWorldX) / bpp;
-        double playerDz = (player.getZ() - centerWorldZ) / bpp;
-        int playerPx = cx + (int) playerDx;
-        int playerPy = cy + (int) playerDz;
+        if (OdysseyConfig.MAP_SHOW_PLAYER_MARKER.get()) {
+            double playerDx = (player.getX() - centerWorldX) / bpp;
+            double playerDz = (player.getZ() - centerWorldZ) / bpp;
+            int playerPx = cx + (int) playerDx;
+            int playerPy = cy + (int) playerDz;
 
-        boolean waypointOnPlayer = false;
-        for (Marker marker : markers) {
-            if (marker.getType() == MarkerType.WAYPOINT) {
-                double dist = MathUtil.distanceXZ(player.getX(), player.getZ(), marker.getX(), marker.getZ());
-                if (dist < 2.0) { waypointOnPlayer = true; break; }
+            boolean waypointOnPlayer = false;
+            for (Marker marker : markers) {
+                if (marker.getType() == MarkerType.WAYPOINT) {
+                    double dist = MathUtil.distanceXZ(player.getX(), player.getZ(), marker.getX(), marker.getZ());
+                    if (dist < 2.0) { waypointOnPlayer = true; break; }
+                }
+            }
+
+            if (!waypointOnPlayer && playerPx >= mapX && playerPy >= mapY && playerPx <= mapX + mapW && playerPy <= mapY + mapH) {
+                boolean safeMode = OdysseyConfig.MAP_SAFE_RENDER_MODE.get();
+                if (!safeMode && OdysseyConfig.SHOW_PLAYER_HEAD.get()) {
+                    RenderUtil.drawPlayerHead(graphics, playerPx, playerPy, 16);
+                } else {
+                    RenderUtil.drawMarkerDot(graphics, playerPx, playerPy, 0xFFFFFFFF, 6);
+                }
             }
         }
 
-        if (!waypointOnPlayer && playerPx >= mapX && playerPy >= mapY && playerPx <= mapX + mapW && playerPy <= mapY + mapH) {
-            if (OdysseyConfig.SHOW_PLAYER_HEAD.get()) {
-                RenderUtil.drawPlayerHead(graphics, playerPx, playerPy, 16);
-            } else {
-                RenderUtil.drawMarkerDot(graphics, playerPx, playerPy, 0xFFFFFFFF, 6);
-            }
-        }
+        if (!OdysseyConfig.MAP_SHOW_WAYPOINTS.get()) return;
+        int maxRendered = OdysseyConfig.MAP_MAX_WAYPOINTS_RENDERED.get();
+        int rendered = 0;
 
         for (Marker marker : markers) {
             if (marker.getType() == MarkerType.PLAYER) continue;
+            if (rendered >= maxRendered) break;
             double dx = (marker.getX() - centerWorldX) / (double) bpp;
             double dz = (marker.getZ() - centerWorldZ) / (double) bpp;
             int px = cx + (int) dx;
@@ -123,6 +131,7 @@ public final class MarkerRenderer {
             String label = marker.getLabel();
             int labelW = mc.font.width(label);
             graphics.drawString(mc.font, label, px - labelW / 2, py - 10, marker.getColor() | 0xFF000000, false);
+            rendered++;
         }
     }
 }

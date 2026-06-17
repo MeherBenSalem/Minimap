@@ -95,6 +95,22 @@ public class MarkerManager {
         MarkerStorage.save();
     }
 
+    public void toggleFavorite(UUID id) {
+        Marker marker = getWaypoint(id);
+        if (marker != null) {
+            marker.setFavorite(!marker.isFavorite());
+            MarkerStorage.save();
+        }
+    }
+
+    public void toggleVisibility(UUID id) {
+        Marker marker = getWaypoint(id);
+        if (marker != null) {
+            marker.setVisible(!marker.isVisible());
+            MarkerStorage.save();
+        }
+    }
+
     public void setDeathPoint(ResourceKey<Level> dimension, int x, int z) {
         if (!OdysseyConfig.SHOW_DEATH.get()) return;
         deathMarker = new Marker(UUID.randomUUID(), MarkerType.DEATH, dimension, x, Marker.UNKNOWN_Y, z, "Death",

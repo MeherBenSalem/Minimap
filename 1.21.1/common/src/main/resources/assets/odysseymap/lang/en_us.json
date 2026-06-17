@@ -14,5 +14,6 @@
   "gui.odysseymap.delete": "Del",
   "gui.odysseymap.save": "Save",
   "gui.odysseymap.cancel": "Cancel",
+  "gui.odysseymap.search": "Search...",
   "screen.odysseymap.waypoint_name": "Name"
 }

@@ -11,9 +11,13 @@
   "screen.odysseymap.waypoint_edit": "Edit Waypoint",
   "screen.odysseymap.waypoint_coords": "Coordinates",
   "screen.odysseymap.waypoint_color": "Color",
+  "screen.odysseymap.waypoint_name": "Name",
+  "screen.odysseymap.waypoints": "Waypoints",
   "gui.odysseymap.edit": "Edit",
   "gui.odysseymap.delete": "Del",
   "gui.odysseymap.save": "Save",
   "gui.odysseymap.cancel": "Cancel",
-  "screen.odysseymap.waypoint_name": "Name"
+  "gui.odysseymap.search": "Search...",
+  "gui.odysseymap.favorite": "Favorite",
+  "gui.odysseymap.loading": "Loading map..."
 }

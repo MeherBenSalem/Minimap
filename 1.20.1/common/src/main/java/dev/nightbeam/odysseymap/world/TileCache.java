@@ -3,13 +3,13 @@ package dev.nightbeam.odysseymap.world;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TileCache {
     private final ColumnSampler sampler;
-    private final Map<Long, Tile> tiles = new HashMap<>();
-    private ResourceKey<Level> currentDimension;
+    private final Map<Long, Tile> tiles = new ConcurrentHashMap<>();
+    private volatile ResourceKey<Level> currentDimension;
 
     public TileCache(ColumnSampler sampler) { this.sampler = sampler; }
 

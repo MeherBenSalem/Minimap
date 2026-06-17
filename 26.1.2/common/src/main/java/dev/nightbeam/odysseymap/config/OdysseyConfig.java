@@ -20,6 +20,7 @@ public class OdysseyConfig {
     private static final Logger LOG = LoggerFactory.getLogger("OdysseyMap");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
+    // HUD / minimap
     public static final ConfigValue<Boolean> ENABLED;
     public static final ConfigValue<Integer> MINIMAP_SIZE;
     public static final ConfigValue<ScreenPosition> POSITION;
@@ -35,6 +36,8 @@ public class OdysseyConfig {
     public static final ConfigValue<Boolean> SHOW_COORDINATES;
     public static final ConfigValue<Boolean> HIDE_WHEN_SCREEN_OPEN;
     public static final ConfigValue<PerformanceMode> PERFORMANCE_MODE;
+
+    // Marker toggles
     public static final ConfigValue<Boolean> SHOW_PLAYERS;
     public static final ConfigValue<Boolean> SHOW_WAYPOINTS;
     public static final ConfigValue<Boolean> SHOW_DEATH;
@@ -47,6 +50,14 @@ public class OdysseyConfig {
     public static final ConfigValue<Integer> FULLSCREEN_DEFAULT_ZOOM;
     public static final ConfigValue<Boolean> FULLSCREEN_SHOW_GRID;
     public static final ConfigValue<Boolean> SHOW_PLAYER_HEAD;
+
+    // Map config (v1.1.0)
+    public static final ConfigValue<Boolean> MAP_FULLSCREEN_ENABLED;
+    public static final ConfigValue<Boolean> MAP_SHOW_COORDINATES;
+    public static final ConfigValue<Boolean> MAP_SHOW_WAYPOINTS;
+    public static final ConfigValue<Boolean> MAP_SHOW_PLAYER_MARKER;
+    public static final ConfigValue<Integer> MAP_MAX_WAYPOINTS_RENDERED;
+    public static final ConfigValue<Boolean> MAP_SAFE_RENDER_MODE;
 
     private static final List<ConfigValue<?>> ALL_VALUES = new ArrayList<>();
 
@@ -92,6 +103,16 @@ public class OdysseyConfig {
         }));
         FULLSCREEN_SHOW_GRID = register(new ConfigValue<>("fullscreenShowGrid", "Show grid on fullscreen map", true));
         SHOW_PLAYER_HEAD = register(new ConfigValue<>("showPlayerHead", "Show 2D player head icon", true));
+
+        // Map config section (v1.1.0)
+        MAP_FULLSCREEN_ENABLED = register(new ConfigValue<>("mapFullscreenEnabled", "Allow opening the fullscreen map", true));
+        MAP_SHOW_COORDINATES = register(new ConfigValue<>("mapShowCoordinates", "Show coordinates overlay on fullscreen map", true));
+        MAP_SHOW_WAYPOINTS = register(new ConfigValue<>("mapShowWaypoints", "Show waypoints on fullscreen map", true));
+        MAP_SHOW_PLAYER_MARKER = register(new ConfigValue<>("mapShowPlayerMarker", "Show player marker on fullscreen map", true));
+        MAP_MAX_WAYPOINTS_RENDERED = register(new ConfigValue<>("mapMaxWaypointsRendered", "Max waypoints rendered on fullscreen map", 200, v -> {
+            if (v < 10 || v > 2000) throw new IllegalArgumentException("Must be 10-2000");
+        }));
+        MAP_SAFE_RENDER_MODE = register(new ConfigValue<>("mapSafeRenderMode", "Safe render mode: throttled compose, dot markers, fewer labels", true));
     }
 
     private static <T> ConfigValue<T> register(ConfigValue<T> val) {
@@ -124,6 +145,30 @@ public class OdysseyConfig {
                             val.set(prim.getAsString());
                         } else if (val.get() instanceof Enum && prim.isString()) {
                             val.setFromObject(prim.getAsString());
+                        }
+                    }
+                }
+            }
+            // Also read nested "map" object for backward compat
+            if (root.has("map") && root.get("map").isJsonObject()) {
+                JsonObject map = root.getAsJsonObject("map");
+                for (ConfigValue val : ALL_VALUES) {
+                    String key = val.getKey();
+                    if (map.has(key)) {
+                        JsonElement elem = map.get(key);
+                        if (elem.isJsonPrimitive()) {
+                            JsonPrimitive prim = elem.getAsJsonPrimitive();
+                            if (val.get() instanceof Boolean && prim.isBoolean()) {
+                                val.set(prim.getAsBoolean());
+                            } else if (val.get() instanceof Integer && prim.isNumber()) {
+                                val.set(prim.getAsInt());
+                            } else if (val.get() instanceof Double && prim.isNumber()) {
+                                val.set(prim.getAsDouble());
+                            } else if (val.get() instanceof String && prim.isString()) {
+                                val.set(prim.getAsString());
+                            } else if (val.get() instanceof Enum && prim.isString()) {
+                                val.setFromObject(prim.getAsString());
+                            }
                         }
                     }
                 }

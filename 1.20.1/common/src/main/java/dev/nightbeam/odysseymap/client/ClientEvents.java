@@ -4,6 +4,7 @@ import dev.nightbeam.odysseymap.config.OdysseyConfig;
 import dev.nightbeam.odysseymap.gui.FullscreenMapScreen;
 import dev.nightbeam.odysseymap.gui.WaypointEditScreen;
 import dev.nightbeam.odysseymap.marker.MarkerManager;
+import dev.nightbeam.odysseymap.render.FullscreenMapRenderer;
 import dev.nightbeam.odysseymap.world.OdysseyMapClient;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -31,6 +32,10 @@ public class ClientEvents {
             OdysseyMapClient.getScanner().tick(mc);
         }
 
+        if (mc.screen instanceof FullscreenMapScreen screen) {
+            FullscreenMapRenderer.tickCompose(mc, screen);
+        }
+
         MarkerManager.get().tick(mc);
     }
 
@@ -39,6 +44,14 @@ public class ClientEvents {
     }
 
     public void onOpenFullscreen(Minecraft mc) {
+        if (mc.player == null || mc.level == null) {
+            LOG.warn("Cannot open fullscreen map: player or level is null");
+            return;
+        }
+        if (!OdysseyConfig.MAP_FULLSCREEN_ENABLED.get()) {
+            return;
+        }
+        FullscreenMapRenderer.invalidate();
         mc.setScreen(new FullscreenMapScreen());
     }
 

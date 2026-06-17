@@ -48,6 +48,14 @@ public class OdysseyConfig {
     public static final ConfigValue<Boolean> FULLSCREEN_SHOW_GRID;
     public static final ConfigValue<Boolean> SHOW_PLAYER_HEAD;
 
+    // v1.1.0 new config values
+    public static final ConfigValue<Boolean> MAP_FULLSCREEN_ENABLED;
+    public static final ConfigValue<Boolean> MAP_SHOW_COORDINATES;
+    public static final ConfigValue<Boolean> MAP_SHOW_WAYPOINTS;
+    public static final ConfigValue<Boolean> MAP_SHOW_PLAYER_MARKER;
+    public static final ConfigValue<Integer> MAP_MAX_WAYPOINTS_RENDERED;
+    public static final ConfigValue<Boolean> MAP_SAFE_RENDER_MODE;
+
     private static final List<ConfigValue<?>> ALL_VALUES = new ArrayList<>();
 
     static {
@@ -92,6 +100,15 @@ public class OdysseyConfig {
         }));
         FULLSCREEN_SHOW_GRID = register(new ConfigValue<>("fullscreenShowGrid", "Show grid on fullscreen map", true));
         SHOW_PLAYER_HEAD = register(new ConfigValue<>("showPlayerHead", "Show 2D player head icon", true));
+
+        MAP_FULLSCREEN_ENABLED = register(new ConfigValue<>("map.fullscreenEnabled", "Enable fullscreen map", true));
+        MAP_SHOW_COORDINATES = register(new ConfigValue<>("map.showCoordinates", "Show coordinates on fullscreen map", true));
+        MAP_SHOW_WAYPOINTS = register(new ConfigValue<>("map.showWaypoints", "Show waypoints on fullscreen map", true));
+        MAP_SHOW_PLAYER_MARKER = register(new ConfigValue<>("map.showPlayerMarker", "Show player on fullscreen map", true));
+        MAP_MAX_WAYPOINTS_RENDERED = register(new ConfigValue<>("map.maxWaypointsRendered", "Max waypoints rendered on map", 100, v -> {
+            if (v < 10 || v > 500) throw new IllegalArgumentException("Must be 10-500");
+        }));
+        MAP_SAFE_RENDER_MODE = register(new ConfigValue<>("map.safeRenderMode", "Reduce rendering load (slower but stable)", false));
     }
 
     private static <T> ConfigValue<T> register(ConfigValue<T> val) {
@@ -109,22 +126,39 @@ public class OdysseyConfig {
         try (Reader reader = Files.newBufferedReader(path)) {
             JsonObject root = GSON.fromJson(reader, JsonObject.class);
             if (root == null) return;
+
+            // Extract nested "map" object for flat-keyed lookups
+            JsonObject mapObj = root.has("map") && root.get("map").isJsonObject()
+                    ? root.getAsJsonObject("map") : null;
+
             for (ConfigValue val : ALL_VALUES) {
-                if (root.has(val.getKey())) {
-                    JsonElement elem = root.get(val.getKey());
-                    if (elem.isJsonPrimitive()) {
-                        JsonPrimitive prim = elem.getAsJsonPrimitive();
-                        if (val.get() instanceof Boolean && prim.isBoolean()) {
-                            val.set(prim.getAsBoolean());
-                        } else if (val.get() instanceof Integer && prim.isNumber()) {
-                            val.set(prim.getAsInt());
-                        } else if (val.get() instanceof Double && prim.isNumber()) {
-                            val.set(prim.getAsDouble());
-                        } else if (val.get() instanceof String && prim.isString()) {
-                            val.set(prim.getAsString());
-                        } else if (val.get() instanceof Enum && prim.isString()) {
-                            val.setFromObject(prim.getAsString());
-                        }
+                String key = val.getKey();
+                JsonElement elem = null;
+
+                // Try nested "map" object first for "map.*" keys
+                if (mapObj != null && key.startsWith("map.")) {
+                    String subKey = key.substring(4);
+                    if (mapObj.has(subKey)) {
+                        elem = mapObj.get(subKey);
+                    }
+                }
+                // Fall back to flat root lookup
+                if (elem == null && root.has(key)) {
+                    elem = root.get(key);
+                }
+
+                if (elem != null && elem.isJsonPrimitive()) {
+                    JsonPrimitive prim = elem.getAsJsonPrimitive();
+                    if (val.get() instanceof Boolean && prim.isBoolean()) {
+                        val.set(prim.getAsBoolean());
+                    } else if (val.get() instanceof Integer && prim.isNumber()) {
+                        val.set(prim.getAsInt());
+                    } else if (val.get() instanceof Double && prim.isNumber()) {
+                        val.set(prim.getAsDouble());
+                    } else if (val.get() instanceof String && prim.isString()) {
+                        val.set(prim.getAsString());
+                    } else if (val.get() instanceof Enum && prim.isString()) {
+                        val.setFromObject(prim.getAsString());
                     }
                 }
             }
@@ -135,14 +169,25 @@ public class OdysseyConfig {
 
     public static void save() {
         Path path = getConfigPath();
-        Map<String, Object> data = new LinkedHashMap<>();
+        Map<String, Object> root = new LinkedHashMap<>();
+        Map<String, Object> mapSection = new LinkedHashMap<>();
+
         for (ConfigValue<?> val : ALL_VALUES) {
-            data.put(val.getKey(), val.get());
+            String key = val.getKey();
+            if (key.startsWith("map.")) {
+                mapSection.put(key.substring(4), val.get());
+            } else {
+                root.put(key, val.get());
+            }
         }
+        if (!mapSection.isEmpty()) {
+            root.put("map", mapSection);
+        }
+
         try {
             Files.createDirectories(path.getParent());
             try (Writer writer = Files.newBufferedWriter(path)) {
-                GSON.toJson(data, writer);
+                GSON.toJson(root, writer);
             }
         } catch (IOException e) {
             LOG.error("Failed to save config", e);

@@ -7,8 +7,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 
 public class FullscreenMapPanel extends AbstractWidget {
@@ -29,27 +29,30 @@ public class FullscreenMapPanel extends AbstractWidget {
 
         graphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), 0xE0101018);
 
-        double panX = parent.getPanX();
-        double panZ = parent.getPanZ();
-        int blocksPerPixel = parent.getBlocksPerPixel();
-
+        // Texture is composed on client tick by FullscreenMapRenderer — just blit here
         var texture = OdysseyMapClient.getMinimapTexture();
-        texture.compose(mc, getWidth(), getHeight(), panX, panZ, false, blocksPerPixel);
-
         var tex = texture.getTextureLocation();
         if (tex != null) {
             int tw = texture.getTextureWidth();
             int th = texture.getTextureHeight();
             graphics.blit(RenderPipelines.GUI_TEXTURED, tex, getX(), getY(), 0f, 0f,
                     getWidth(), getHeight(), tw, th, tw, th);
+        } else {
+            // Loading fallback — map data not yet available
+            String loading = "Loading map...";
+            int textW = mc.font.width(loading);
+            graphics.text(mc.font, loading,
+                    getX() + (getWidth() - textW) / 2,
+                    getY() + getHeight() / 2 - 4,
+                    0xFFAAAAAA, false);
         }
 
         if (OdysseyConfig.FULLSCREEN_SHOW_GRID.get()) {
-            drawGrid(graphics, blocksPerPixel);
+            drawGrid(graphics, parent.getBlocksPerPixel());
         }
 
         MarkerRenderer.renderFullscreen(graphics, mc, getX(), getY(), getWidth(), getHeight(),
-                panX, panZ, blocksPerPixel);
+                parent.getPanX(), parent.getPanZ(), parent.getBlocksPerPixel());
     }
 
     private void drawGrid(GuiGraphicsExtractor graphics, int blocksPerPixel) {

@@ -17,6 +17,7 @@ public class Marker {
     private String label;
     private int color;
     private boolean visible = true;
+    private boolean favorite = false;
 
     public Marker(UUID id, MarkerType type, ResourceKey<Level> dimension, int x, int z, String label) {
         this(id, type, dimension, x, UNKNOWN_Y, z, label, type.defaultColor);
@@ -49,5 +50,7 @@ public class Marker {
     public void setColor(int color) { this.color = color; }
     public boolean isVisible() { return visible; }
     public void setVisible(boolean visible) { this.visible = visible; }
+    public boolean isFavorite() { return favorite; }
+    public void setFavorite(boolean favorite) { this.favorite = favorite; }
     public boolean hasKnownY() { return y != UNKNOWN_Y; }
 }
