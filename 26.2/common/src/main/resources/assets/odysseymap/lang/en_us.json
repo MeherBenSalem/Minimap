@@ -1,0 +1,23 @@
+{
+  "key.category.odysseymap.keys": "Odyssey Map",
+  "key.categories.odysseymap": "Odyssey Map",
+  "key.odysseymap.toggle": "Toggle Minimap",
+  "key.odysseymap.fullscreen": "Open Fullscreen Map",
+  "key.odysseymap.zoom_in": "Zoom In",
+  "key.odysseymap.zoom_out": "Zoom Out",
+  "key.odysseymap.waypoint": "Create Waypoint",
+  "screen.odysseymap.fullscreen": "Odyssey Map",
+  "screen.odysseymap.waypoint_create": "Create Waypoint",
+  "screen.odysseymap.waypoint_edit": "Edit Waypoint",
+  "screen.odysseymap.waypoint_coords": "Coordinates",
+  "screen.odysseymap.waypoint_color": "Color",
+  "screen.odysseymap.waypoint_name": "Name",
+  "screen.odysseymap.waypoints": "Waypoints",
+  "gui.odysseymap.edit": "Edit",
+  "gui.odysseymap.delete": "Del",
+  "gui.odysseymap.save": "Save",
+  "gui.odysseymap.cancel": "Cancel",
+  "gui.odysseymap.search": "Search...",
+  "gui.odysseymap.favorite": "Favorite",
+  "gui.odysseymap.loading": "Loading map..."
+}
