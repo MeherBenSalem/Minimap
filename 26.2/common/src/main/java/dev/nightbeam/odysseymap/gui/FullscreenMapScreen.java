@@ -1,6 +1,7 @@
 package dev.nightbeam.odysseymap.gui;
 
 import dev.nightbeam.odysseymap.config.OdysseyConfig;
+import dev.nightbeam.odysseymap.gui.MapSettingsScreen;
 import dev.nightbeam.odysseymap.marker.Marker;
 import dev.nightbeam.odysseymap.marker.MarkerManager;
 import dev.nightbeam.odysseymap.client.RuntimeClientState;
@@ -85,6 +86,11 @@ public class FullscreenMapScreen extends Screen {
                 .bounds(50, 2, 36, 18).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.odysseymap.delete"), b -> deleteSelected())
                 .bounds(88, 2, 36, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("Settings"), b -> {
+            if (minecraft != null) {
+                minecraft.gui.setScreen(new MapSettingsScreen(this));
+            }
+        }).bounds(128, 2, 50, 18).build());
 
         // Recenter
         addRenderableWidget(Button.builder(Component.literal("Recenter"), b -> recenter())

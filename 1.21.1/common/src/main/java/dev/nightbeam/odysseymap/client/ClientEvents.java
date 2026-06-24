@@ -2,6 +2,7 @@ package dev.nightbeam.odysseymap.client;
 
 import dev.nightbeam.odysseymap.config.OdysseyConfig;
 import dev.nightbeam.odysseymap.gui.FullscreenMapScreen;
+import dev.nightbeam.odysseymap.gui.MapSettingsScreen;
 import dev.nightbeam.odysseymap.gui.WaypointEditScreen;
 import dev.nightbeam.odysseymap.marker.MarkerManager;
 import dev.nightbeam.odysseymap.render.FullscreenMapRenderer;
@@ -53,6 +54,11 @@ public class ClientEvents {
         }
         FullscreenMapRenderer.invalidate();
         mc.setScreen(new FullscreenMapScreen());
+    }
+
+    public void onOpenSettings(Minecraft mc) {
+        if (mc.player == null || mc.level == null) return;
+        mc.setScreen(new MapSettingsScreen(null));
     }
 
     public void onZoomIn() {

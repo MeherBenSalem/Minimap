@@ -14,6 +14,7 @@ public final class OdysseyKeyMappings {
     public static final int KEY_ZOOM_IN = GLFW.GLFW_KEY_EQUAL;
     public static final int KEY_ZOOM_OUT = GLFW.GLFW_KEY_MINUS;
     public static final int KEY_CREATE_WAYPOINT = GLFW.GLFW_KEY_B;
+    public static final int KEY_OPEN_SETTINGS = GLFW.GLFW_KEY_O;
 
     private OdysseyKeyMappings() {}
 }

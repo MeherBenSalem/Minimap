@@ -1,3 +1,29 @@
+# Odyssey Map v1.2.0
+
+**Release Date:** June 24, 2026  
+**Supported MC Versions:** 1.20.1 (Forge/Fabric), 1.21.1 (NeoForge/Fabric), 26.1.2 (NeoForge/Fabric), 26.2 (NeoForge/Fabric)
+
+---
+
+## New Features
+
+- **In-Game Settings Screen (MapSettingsScreen)** — A comprehensive configuration UI screen directly accessible inside Minecraft. Players no longer need to edit `config.json` manually in their mod folders.
+  - Accessible via a new `Settings` button on the Fullscreen Map top bar.
+  - Bound to the default `O` key (fully rebindable in standard Controls config).
+  - Divided into 4 categorical tabs:
+    - **Minimap**: Toggle minimap HUD, adjust size (64-512px), screen corner position, shape (circle/square), zoom, rotation mode, transparency, and show/hide options.
+    - **HUD & Markers**: Toggle overlays (compass, coordinates) and configure individual marker visibility (players, waypoints, death, beds, portals, structures, entities, distance overlays, and clamping).
+    - **Fullscreen Map**: Enable/disable map features, default zoom level, grid display, max waypoint limit, and safe render mode.
+    - **Performance**: Configure performance preset presets, scan interval, columns per tick, border thickness, and custom border color (Hex ARGB field with a live color swatch).
+  - **Auto-Saving**: Any changed options save automatically to the configuration file on click and apply in-game immediately without requiring client restarts.
+
+## Technical Improvements
+
+- Custom standalone screen implementation per version in the `common` subproject package `dev.nightbeam.odysseymap.gui` ensuring full compatibility across Fabric, Forge, and NeoForge mod loaders.
+- Updated English locale keys in `en_us.json` for settings key mappings.
+
+---
+
 # Odyssey Map v1.1.0
 
 **Release Date:** June 17, 2026  

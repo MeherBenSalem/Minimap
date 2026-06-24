@@ -17,6 +17,7 @@ public class OdysseyMapFabric implements ClientModInitializer {
     private static KeyMapping ZOOM_IN;
     private static KeyMapping ZOOM_OUT;
     private static KeyMapping CREATE_WAYPOINT;
+    private static KeyMapping OPEN_SETTINGS;
 
     private final ClientEvents events = new ClientEvents();
     private boolean wasDead;
@@ -36,6 +37,7 @@ public class OdysseyMapFabric implements ClientModInitializer {
             while (ZOOM_IN.consumeClick()) events.onZoomIn();
             while (ZOOM_OUT.consumeClick()) events.onZoomOut();
             while (CREATE_WAYPOINT.consumeClick()) events.onCreateWaypoint(client);
+            while (OPEN_SETTINGS.consumeClick()) events.onOpenSettings(client);
 
             LocalPlayer player = client.player;
             if (player != null) {
@@ -68,5 +70,7 @@ public class OdysseyMapFabric implements ClientModInitializer {
                 OdysseyKeyMappings.KEY_ZOOM_OUT, OdysseyKeyMappings.CATEGORY);
         CREATE_WAYPOINT = new KeyMapping("key.odysseymap.waypoint", InputConstants.Type.KEYSYM,
                 OdysseyKeyMappings.KEY_CREATE_WAYPOINT, OdysseyKeyMappings.CATEGORY);
+        OPEN_SETTINGS = new KeyMapping("key.odysseymap.settings", InputConstants.Type.KEYSYM,
+                OdysseyKeyMappings.KEY_OPEN_SETTINGS, OdysseyKeyMappings.CATEGORY);
     }
 }

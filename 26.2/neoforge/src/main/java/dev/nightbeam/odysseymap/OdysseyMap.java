@@ -27,6 +27,7 @@ public class OdysseyMap {
     private static KeyMapping ZOOM_IN;
     private static KeyMapping ZOOM_OUT;
     private static KeyMapping CREATE_WAYPOINT;
+    private static KeyMapping OPEN_SETTINGS;
 
     private final ClientEvents events = new ClientEvents();
     private boolean wasDead;
@@ -51,11 +52,14 @@ public class OdysseyMap {
                 OdysseyKeyMappings.KEY_ZOOM_OUT, OdysseyKeyMappings.CATEGORY);
         CREATE_WAYPOINT = new KeyMapping("key.odysseymap.waypoint", InputConstants.Type.KEYSYM,
                 OdysseyKeyMappings.KEY_CREATE_WAYPOINT, OdysseyKeyMappings.CATEGORY);
+        OPEN_SETTINGS = new KeyMapping("key.odysseymap.settings", InputConstants.Type.KEYSYM,
+                OdysseyKeyMappings.KEY_OPEN_SETTINGS, OdysseyKeyMappings.CATEGORY);
         event.register(TOGGLE_MINIMAP);
         event.register(OPEN_FULLSCREEN);
         event.register(ZOOM_IN);
         event.register(ZOOM_OUT);
         event.register(CREATE_WAYPOINT);
+        event.register(OPEN_SETTINGS);
     }
 
     @SubscribeEvent
@@ -87,6 +91,7 @@ public class OdysseyMap {
         while (ZOOM_IN.consumeClick()) events.onZoomIn();
         while (ZOOM_OUT.consumeClick()) events.onZoomOut();
         while (CREATE_WAYPOINT.consumeClick()) events.onCreateWaypoint(mc);
+        while (OPEN_SETTINGS.consumeClick()) events.onOpenSettings(mc);
     }
 
     @SubscribeEvent
