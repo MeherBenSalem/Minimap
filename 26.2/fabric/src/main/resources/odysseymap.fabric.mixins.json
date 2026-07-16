@@ -5,7 +5,7 @@
     "refmap": "${mod_id}.refmap.json",
     "compatibilityLevel": "JAVA_25",
     "mixins": ["MixinLevel"],
-    "client": ["MixinMinecraft", "MixinGui", "MixinGameRenderer", "LevelRendererAccessor", "GameRendererAccessor"],
+    "client": ["MixinMinecraft", "MixinGui", "MixinGameRenderer", "LevelRendererAccessor"],
     "server": [],
     "injectors": { "defaultRequire": 1 }
 }

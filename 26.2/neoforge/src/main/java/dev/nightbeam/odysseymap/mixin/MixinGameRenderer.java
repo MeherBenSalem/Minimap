@@ -2,6 +2,7 @@ package dev.nightbeam.odysseymap.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.nightbeam.odysseymap.render.WorldWaypointRenderer;
+import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
@@ -19,14 +20,14 @@ public class MixinGameRenderer {
         if (mc.level == null || mc.player == null) return;
         float partialTick = deltaTracker.getGameTimeDeltaPartialTick(false);
         PoseStack poseStack = new PoseStack();
-        GameRendererAccessor gr = (GameRendererAccessor) mc.gameRenderer;
+        Camera camera = mc.gameRenderer.mainCamera();
         WorldWaypointRenderer.render(
                 poseStack,
-                ((LevelRendererAccessor) mc.levelRenderer).submitNodeStorage,
+                ((LevelRendererAccessor) mc.levelRenderer).getSubmitNodeStorage(),
                 mc.font,
-                gr.mainCamera,
+                camera,
                 mc.level,
-                gr.mainCamera.position(),
+                camera.position(),
                 partialTick,
                 mc.level.getGameTime());
     }
