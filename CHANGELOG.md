@@ -1,3 +1,21 @@
+# Odyssey Map v1.2.2
+
+**Release Date:** August 27, 2026  
+**Supported MC Versions:** 1.20.1 (Forge/Fabric), 1.21.1 (NeoForge/Fabric), 26.1.2 (NeoForge/Fabric), 26.2 (NeoForge/Fabric)
+
+---
+
+## Bug Fixes
+
+- **Fixed MC 26.2 NeoForge/Fabric startup crash** — `MixinGui` targeted an obsolete `extractRenderState(GuiGraphicsExtractor, DeltaTracker)` descriptor. Vanilla 26.2 uses `extractRenderState(DeltaTracker, boolean, boolean)` and builds `GuiGraphicsExtractor` locally. The mixin now matches that signature, shadows `guiRenderState`, and draws the minimap before `applyCursor`.
+
+### Upgrade Notes
+
+1. Replace `odysseymap-*-26.2-1.2.1.jar` with the matching **1.2.2** loader jar.
+2. No config reset required.
+
+---
+
 # Odyssey Map v1.2.1
 
 **Release Date:** July 16, 2026  
