@@ -1,0 +1,150 @@
+String wrapperCmd(String rootDirName) {
+    File root = file(rootDirName)
+    if (System.getProperty('os.name').toLowerCase().contains('win')) {
+        return new File(root, 'gradlew.bat').absolutePath
+    }
+    return new File(root, 'gradlew').absolutePath
+}
+
+String javaHomeFor(String rootDirName) {
+    def props = file("${rootDirName}/gradle.properties")
+    if (!props.exists()) {
+        return System.getenv('JAVA_HOME')
+    }
+    def javaVersion = props.readLines()
+        .find { it.startsWith('java_version=') }
+        ?.substring('java_version='.length())
+    switch (javaVersion) {
+        case '17':
+            return System.getenv('JAVA_HOME_17') ?: System.getenv('JAVA_HOME')
+        case '21':
+            return System.getenv('JAVA_HOME_21') ?: System.getenv('JAVA_HOME')
+        case '25':
+            return System.getenv('JAVA_HOME_25') ?: System.getenv('JAVA_HOME')
+        default:
+            return System.getenv('JAVA_HOME')
+    }
+}
+
+void configureWorkspaceBuild(String taskName, String rootDirName, String description) {
+    tasks.register(taskName, Exec) {
+        group = 'build'
+        it.description = description
+        workingDir = file(rootDirName)
+        def jh = javaHomeFor(rootDirName)
+        if (jh) {
+            environment 'JAVA_HOME', jh
+        }
+        commandLine wrapperCmd(rootDirName), 'build', '--no-daemon'
+    }
+}
+
+void configureWorkspaceClean(String taskName, String rootDirName, String description) {
+    tasks.register(taskName, Exec) {
+        group = 'build'
+        it.description = description
+        workingDir = file(rootDirName)
+        def jh = javaHomeFor(rootDirName)
+        if (jh) {
+            environment 'JAVA_HOME', jh
+        }
+        commandLine wrapperCmd(rootDirName), 'clean', '--no-daemon'
+    }
+}
+
+configureWorkspaceBuild('build1201', '1.20.1', 'Build all 1.20.1 loaders (Fabric + Forge).')
+configureWorkspaceBuild('build1211', '1.21.1', 'Build all 1.21.1 loaders (Fabric + NeoForge).')
+configureWorkspaceBuild('build2612', '26.1.2', 'Build all 26.1.2 loaders (Fabric + NeoForge).')
+configureWorkspaceBuild('build262', '26.2', 'Build all 26.2 loaders (Fabric + NeoForge).')
+
+configureWorkspaceClean('clean1201', '1.20.1', 'Clean all 1.20.1 loaders.')
+configureWorkspaceClean('clean1211', '1.21.1', 'Clean all 1.21.1 loaders.')
+configureWorkspaceClean('clean2612', '26.1.2', 'Clean all 26.1.2 loaders.')
+configureWorkspaceClean('clean262', '26.2', 'Clean all 26.2 loaders.')
+
+tasks.register('dist') {
+    group = 'build'
+    description = 'Build ALL versions and copy every mod JAR into all-jars/.'
+    dependsOn 'build1201', 'build1211', 'build2612', 'build262'
+    notCompatibleWithConfigurationCache('Copies workspace JARs with dynamic file trees.')
+    doLast {
+        def outDir = project.layout.projectDirectory.dir('all-jars').asFile
+        outDir.mkdirs()
+        def dirs = ['1.20.1/fabric', '1.20.1/forge',
+                    '1.21.1/fabric', '1.21.1/neoforge',
+                    '26.1.2/fabric', '26.1.2/neoforge',
+                    '26.2/fabric', '26.2/neoforge']
+        dirs.each { modDir ->
+            def libsDir = project.file("${modDir}/build/libs")
+            if (libsDir.exists()) {
+                project.fileTree(libsDir).matching {
+                    include '*.jar'
+                    exclude '*-sources.jar', '*-javadoc.jar', '*-dev.jar', '*-shadow.jar', '*-dev-shadow.jar'
+                }.each { jar ->
+                    project.copy {
+                        from jar
+                        into outDir
+                    }
+                }
+            }
+        }
+        println "All JARs collected in: ${outDir.absolutePath}"
+    }
+}
+
+tasks.register('buildAll') {
+    group = 'build'
+    description = 'Build ALL versions and collect JARs into all-jars/.'
+    dependsOn 'dist'
+}
+
+tasks.register('cleanAll') {
+    group = 'build'
+    description = 'Clean ALL versions and all-jars/.'
+    dependsOn 'clean1201', 'clean1211', 'clean2612', 'clean262'
+    doLast {
+        def outDir = file('all-jars')
+        if (outDir.exists()) {
+            outDir.deleteDir()
+            println 'Cleaned all-jars directory.'
+        }
+    }
+}
+
+tasks.register('syncVersion') {
+    group = 'build'
+    description = 'Set version= in all workspace gradle.properties (use -PmodVersion=x.y.z or VERSION file).'
+    doLast {
+        def v = project.findProperty('modVersion')
+        if (!v) {
+            def versionFile = file('VERSION')
+            if (versionFile.exists()) {
+                v = versionFile.text.trim()
+            }
+        }
+        if (!v) {
+            throw new GradleException('Pass -PmodVersion=x.y.z or add a VERSION file at repo root.')
+        }
+        file('VERSION').text = v + System.lineSeparator()
+        ['1.20.1', '1.21.1', '26.1.2', '26.2'].each { dir ->
+            def props = file("${dir}/gradle.properties")
+            if (!props.exists()) {
+                throw new GradleException("Missing ${props}")
+            }
+            def lines = props.readLines()
+            def updated = false
+            def out = lines.collect { line ->
+                if (line.startsWith('version=')) {
+                    updated = true
+                    return "version=${v}"
+                }
+                return line
+            }
+            if (!updated) {
+                throw new GradleException("No version= line in ${props}")
+            }
+            props.text = out.join(System.lineSeparator()) + System.lineSeparator()
+            println "Synced ${props} -> ${v}"
+        }
+    }
+}

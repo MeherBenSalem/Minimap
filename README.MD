@@ -1,46 +1,46 @@
-# MiniMaps (Odyssey Map)
+# Odyssey Map
 
-This repository contains self-contained MultiLoader projects per Minecraft version:
+Client-side Minecraft minimap with real-time terrain rendering, markers, waypoints,
+and a fullscreen map. Formerly known as MiniMaps / Vanilla Minimaps.
 
-| Folder | Minecraft | Loaders | JDK | Status |
-|--------|-----------|---------|-----|--------|
-| [`1.20.1/`](1.20.1/) | 1.20.1 | Fabric + Forge | 17 | Archived |
-| [`1.21.1/`](1.21.1/) | 1.21.1 | Fabric + NeoForge | 21 | Maintained |
-| [`26.1.2/`](26.1.2/) | 26.1.2 | Fabric + NeoForge | 25 | Maintained |
-| [`26.2/`](26.2/) | 26.2 | Fabric + NeoForge | 25 | Active |
+## Supported versions
 
-## Building 26.2 (active)
+| Version root | Minecraft | Loaders | Java |
+| --- | --- | --- | --- |
+| `1.20.1/` | 1.20.1 | Fabric, Forge | 17 |
+| `1.21.1/` | 1.21.1 | Fabric, NeoForge | 21 |
+| `26.1.2/` | 26.1.2 | Fabric, NeoForge | 25 |
+| `26.2/` | 26.2 | Fabric, NeoForge | 25 |
 
-Requires **JDK 25** (Gradle uses the Java 25 toolchain; set `JAVA_HOME` if your default JRE is newer).
+Each version root is an independent Gradle project.
 
-```bash
-cd 26.2
-./gradlew :fabric:build :neoforge:build
+## Features
+
+- Real-time terrain minimap with smooth rotation
+- Waypoints and markers
+- Fullscreen map view
+- In-game settings screen
+
+## Building
+
+```powershell
+$env:JAVA_HOME_17 = "C:\Program Files\Eclipse Adoptium\jdk-17*"
+$env:JAVA_HOME_21 = "C:\Program Files\Eclipse Adoptium\jdk-21*"
+$env:JAVA_HOME_25 = "C:\Program Files\Eclipse Adoptium\jdk-25*"
+$env:JAVA_HOME = $env:JAVA_HOME_21
+.\gradlew.bat buildAll --no-daemon
 ```
 
-Run the client (from `26.2/`):
+Built mod JARs are collected under `all-jars/`.
 
-```bash
-./gradlew :fabric:runClient
-./gradlew :neoforge:runClient
-```
+## Contributing
 
-Open `26.2/` as the Gradle project in your IDE with JDK 25.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Building 26.1.2
+## Security
 
-Requires **JDK 25**.
+See [.github/SECURITY.md](.github/SECURITY.md).
 
-```bash
-cd 26.1.2
-./gradlew :fabric:build :neoforge:build
-```
+## License
 
-## Building 1.21.1
-
-```bash
-cd 1.21.1
-./gradlew :fabric:build :neoforge:build
-```
-
-Open `1.21.1/` as the Gradle project in IntelliJ with JDK 21.
+Apache License 2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE).
