@@ -101,8 +101,11 @@ def inspect(jar, root, game, loader, java, version):
                     'Fabric identity/version mismatch')
             require(metadata.get('environment') == 'client', 'Fabric environment mismatch')
             depends = metadata.get('depends', {})
+            # Preserve 1.20.1's existing declared Loader minimum, independently
+            # of its build Loader. Fabric API may impose its own newer minimum.
+            loader_minimum = '>=0.14' if game == '1.20.1' else '>=' + props['fabric_loader_version']
             require(depends.get('minecraft') == game and depends.get('java') == f'>={java}'
-                    and depends.get('fabricloader') == '>=' + props['fabric_loader_version']
+                    and depends.get('fabricloader') == loader_minimum
                     and 'fabric-api' in depends, 'Fabric dependencies mismatch')
             entries = metadata.get('entrypoints', {}).get('client', [])
             require(entries == ['dev.nightbeam.odysseymap.OdysseyMapFabric'], 'Fabric entrypoint mismatch')

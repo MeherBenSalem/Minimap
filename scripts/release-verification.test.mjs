@@ -18,7 +18,7 @@ const run = {head_sha: sha, path: '.github/workflows/ci.yml', name: 'CI', status
   head_repository: {full_name: REPOSITORY}, event: 'push', head_branch: 'main'};
 const jobs = MATRIX.map((target, index) => ({id: index + 1, name: `build (${target.game}, ${target.loader}, ${target.java})`,
   conclusion: 'success', steps: requiredBuildSteps.map(name => ({name, conclusion: 'success'}))}));
-jobs.push({id: 9, name: 'release-validation', conclusion: 'success', steps: ['Check publication credential presence', 'Release helper regression tests', 'Packaged JAR verifier regression tests', 'Verify public supported inventory'].map(name => ({name, conclusion: 'success'}))});
+jobs.push({id: 9, name: 'release-validation', conclusion: 'success', steps: ['Release helper regression tests', 'Packaged JAR verifier regression tests', 'Verify public supported inventory'].map(name => ({name, conclusion: 'success'}))});
 const clone = x => structuredClone(x);
 
 test('eight exact loader/game/Java targets and distinct filenames', () => {

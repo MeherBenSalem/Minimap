@@ -19,25 +19,6 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Check publication credential presence
-        if: ${{ github.event_name == 'push' && github.repository == 'MeherBenSalem/Minimap' }}
-        env:
-          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
-          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
-        run: |
-          python3 - <<'PYTHON'
-          import os
-          names = ['MODRINTH_TOKEN', 'CURSEFORGE_TOKEN', 'CURSEFORGE_API_KEY']
-          missing = []
-          for name in names:
-              present = bool(os.environ.get(name))
-              print(f'{name}: present={str(present).lower()}')
-              if not present:
-                  missing.append(name)
-          if missing:
-              raise SystemExit('Missing GitHub Actions secret names: ' + ', '.join(missing))
-          PYTHON
       - uses: actions/setup-node@v4
         with:
           node-version: '24'

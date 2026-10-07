@@ -25,7 +25,7 @@ export function verifyCiRun(run, jobs, sourceSha) {
     && run.head_repository?.full_name === REPOSITORY && run.event === 'push' && run.head_branch === 'main',
     'No successful main-branch CI for the exact release source SHA');
   const required = MATRIX.map(target => ({name: `build (${target.game}, ${target.loader}, ${target.java})`, steps: requiredBuildSteps}));
-  required.push({name: 'release-validation', steps: ['Check publication credential presence', 'Release helper regression tests', 'Packaged JAR verifier regression tests', 'Verify public supported inventory']});
+  required.push({name: 'release-validation', steps: ['Release helper regression tests', 'Packaged JAR verifier regression tests', 'Verify public supported inventory']});
   const latest = new Map();
   for (const job of jobs) if (!latest.has(job.name) || latest.get(job.name).id < job.id) latest.set(job.name, job);
   requireThat(latest.size === required.length, 'Unexpected or incomplete CI job matrix');

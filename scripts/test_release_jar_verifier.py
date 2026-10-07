@@ -40,7 +40,8 @@ class VerifierTests(unittest.TestCase):
             entries[PREFIX + 'OdysseyMapFabric.class'] = class_bytes(java)
             entries['fabric.mod.json'] = json.dumps({'id': 'odysseymap', 'version': VERSION, 'environment': 'client',
                 'entrypoints': {'client': ['dev.nightbeam.odysseymap.OdysseyMapFabric']}, 'mixins': ['odysseymap.mixins.json'],
-                'depends': {'minecraft': game, 'java': f'>={java}', 'fabricloader': '>=0.16.9', 'fabric-api': '*'}}).encode()
+                'depends': {'minecraft': game, 'java': f'>={java}',
+                    'fabricloader': '>=0.14' if game == '1.20.1' else '>=0.16.9', 'fabric-api': '*'}}).encode()
         else:
             entries[PREFIX + 'OdysseyMap.class'] = class_bytes(java)
             dependency = '47.2.30' if loader == 'forge' else '21.1.80'
@@ -90,6 +91,19 @@ class VerifierTests(unittest.TestCase):
     def test_wrong_fabric_loader_metadata_is_rejected(self):
         def edit(entries):
             metadata = json.loads(entries['fabric.mod.json']); metadata['depends']['java'] = '>=25'
+            entries['fabric.mod.json'] = json.dumps(metadata).encode()
+        with self.assertRaisesRegex(ValueError, 'Fabric dependencies mismatch'):
+            self.verify(changes=edit)
+    def test_changed_fabric_loader_minimum_is_rejected(self):
+        def edit(entries):
+            metadata = json.loads(entries['fabric.mod.json']); metadata['depends']['fabricloader'] = '>=0.1'
+            entries['fabric.mod.json'] = json.dumps(metadata).encode()
+        for target in (MATRIX[0], MATRIX[2]):
+            with self.subTest(target=target), self.assertRaisesRegex(ValueError, 'Fabric dependencies mismatch'):
+                self.verify(target, edit)
+    def test_missing_explicit_fabric_api_dependency_is_rejected(self):
+        def edit(entries):
+            metadata = json.loads(entries['fabric.mod.json']); metadata['depends'].pop('fabric-api')
             entries['fabric.mod.json'] = json.dumps(metadata).encode()
         with self.assertRaisesRegex(ValueError, 'Fabric dependencies mismatch'):
             self.verify(changes=edit)

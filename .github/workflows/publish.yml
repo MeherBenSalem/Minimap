@@ -41,6 +41,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
+      - name: Check publication credential presence
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+        run: |
+          python3 - <<'PYTHON'
+          import os
+          names = ['MODRINTH_TOKEN', 'CURSEFORGE_TOKEN', 'CURSEFORGE_API_KEY']
+          missing = []
+          for name in names:
+              present = bool(os.environ.get(name))
+              print(f'{name}: present={str(present).lower()}')
+              if not present:
+                  missing.append(name)
+          if missing:
+              raise SystemExit('Missing GitHub Actions secret names: ' + ', '.join(missing))
+          PYTHON
       - name: Checkout trusted release verification helpers
         uses: actions/checkout@v4
         with:
