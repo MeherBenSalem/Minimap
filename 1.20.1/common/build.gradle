@@ -5,6 +5,8 @@ plugins {
 
 legacyForge {
     mcpVersion = minecraft_version
+    // Native smoke tests need the full Minecraft runtime, including vanilla resources.
+    addModdingDependenciesTo(sourceSets.test)
     if (file("src/main/resources/META-INF/accesstransformer.cfg").exists()) {
         accessTransformers = ["src/main/resources/META-INF/accesstransformer.cfg"]
     }
