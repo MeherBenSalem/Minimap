@@ -34,3 +34,13 @@ artifacts {
     commonJava sourceSets.main.java.sourceDirectories.singleFile
     commonResources sourceSets.main.resources.sourceDirectories.singleFile
 }
+
+// Verify persistence with this workspace's real Minecraft API and bytecode.
+tasks.register('persistenceSmokeTest', JavaExec) {
+    group = 'verification'
+    description = 'Run terrain persistence smoke checks against actual Minecraft classes.'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass = 'dev.nightbeam.odysseymap.world.PersistenceSmokeTest'
+    maxHeapSize = '256m'
+}

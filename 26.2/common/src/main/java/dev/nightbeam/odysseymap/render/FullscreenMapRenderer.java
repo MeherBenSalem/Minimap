@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Coordinates fullscreen map texture composition on the client tick thread.
- * In MC 26.1.2, MinimapTexture.compose() + upload must NOT run inside
+ * In MC 26.2, MinimapTexture.compose() + upload must NOT run inside
  * extractWidgetRenderState (deferred GUI pipeline) — it must run on the
  * client tick thread to avoid render-thread violations and TileCache races.
  */
@@ -22,6 +22,7 @@ public final class FullscreenMapRenderer {
     private static int lastW = -1;
     private static int lastH = -1;
     private static int composeThrottle;
+    private static long lastContentVersion = -1;
 
     private FullscreenMapRenderer() {}
 
@@ -51,12 +52,14 @@ public final class FullscreenMapRenderer {
             composeThrottle = 0;
         }
 
+        long contentVersion = dev.nightbeam.odysseymap.world.OdysseyMapClient.getTileCache().getContentVersion();
         // Skip recompose if nothing changed
         if (panX == lastPanX && panZ == lastPanZ
-                && bpp == lastBlocksPerPixel && w == lastW && h == lastH) {
+                && bpp == lastBlocksPerPixel && w == lastW && h == lastH && contentVersion == lastContentVersion) {
             return;
         }
 
+        lastContentVersion = contentVersion;
         lastPanX = panX;
         lastPanZ = panZ;
         lastBlocksPerPixel = bpp;

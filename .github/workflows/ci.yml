@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'fix/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: odyssey-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-validation:
+    name: release-validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Release helper regression tests
+        run: node --test scripts/release-verification.test.mjs
+      - name: Packaged JAR verifier regression tests
+        run: python3 scripts/test_release_jar_verifier.py
+      - name: Verify public supported inventory
+        run: node scripts/verify_supported_inventory.mjs
+
+  build:
+    name: build (${{ matrix.game }}, ${{ matrix.loader }}, ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      JAVA_TOOL_OPTIONS: -XX:ActiveProcessorCount=2
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {game: '1.20.1', loader: fabric, java: '17'}
+          - {game: '1.20.1', loader: forge, java: '17'}
+          - {game: '1.21.1', loader: fabric, java: '21'}
+          - {game: '1.21.1', loader: neoforge, java: '21'}
+          - {game: '26.1.2', loader: fabric, java: '25'}
+          - {game: '26.1.2', loader: neoforge, java: '25'}
+          - {game: '26.2', loader: fabric, java: '25'}
+          - {game: '26.2', loader: neoforge, java: '25'}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Deterministic map persistence regressions
+        run: bash scripts/test_map_persistence.sh --version '${{ matrix.game }}' --release '${{ matrix.java }}'
+      - name: Minecraft storage smoke test
+        working-directory: ${{ matrix.game }}
+        run: bash ./gradlew :common:persistenceSmokeTest --no-daemon --max-workers=2 -Dorg.gradle.jvmargs=-Xmx1G --stacktrace
+      - name: Build packaged loader JAR
+        working-directory: ${{ matrix.game }}
+        run: bash ./gradlew :${{ matrix.loader }}:build --no-daemon --max-workers=2 -Dorg.gradle.jvmargs=-Xmx1G --stacktrace
+      - name: Inspect packaged release JAR
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          CI_RUN_ID: ${{ github.run_id }}
+        run: |
+          python3 scripts/inspect_release_jar.py \
+            --version "$(tr -d '\r\n' < VERSION)" --source-sha "$SOURCE_SHA" --ci-run-id "$CI_RUN_ID" \
+            --game '${{ matrix.game }}' --loader '${{ matrix.loader }}' --java '${{ matrix.java }}' \
+            --output release-artifact
+      - name: Preserve immutable CI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: odyssey-${{ matrix.game }}-${{ matrix.loader }}-${{ github.sha }}
+          path: release-artifact/*
+          if-no-files-found: error
+          retention-days: 90

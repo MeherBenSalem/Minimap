@@ -57,3 +57,14 @@ sourceSets.configureEach {
         }
     }
 }
+
+// Execute storage/cache assertions with real Minecraft classes, without graphics or a running client.
+tasks.register('persistenceSmokeTest', JavaExec) {
+    group = 'verification'
+    description = 'Run explored-terrain persistence smoke tests against real Minecraft dependencies.'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass = 'dev.nightbeam.odysseymap.world.PersistenceSmokeTest'
+    enableAssertions = true
+    maxHeapSize = '256m'
+}
