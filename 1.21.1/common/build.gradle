@@ -40,6 +40,9 @@ artifacts {
 }
 
 
+// The Minecraft development dependency is attached to main; native smoke sources also need it.
+sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
+
 // Verify persistence with this workspace's real Minecraft API and bytecode.
 tasks.register('persistenceSmokeTest', JavaExec) {
     group = 'verification'

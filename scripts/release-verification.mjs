@@ -24,7 +24,7 @@ export function verifyCiRun(run, jobs, sourceSha) {
     && run.head_repository?.full_name === REPOSITORY && run.event === 'push' && run.head_branch === 'main',
     'No successful main-branch CI for the exact release source SHA');
   const required = MATRIX.map(target => ({name: `build (${target.game}, ${target.loader}, ${target.java})`, steps: requiredBuildSteps}));
-  required.push({name: 'release-validation', steps: ['Release helper regression tests', 'Packaged JAR verifier regression tests', 'Verify public supported inventory']});
+  required.push({name: 'release-validation', steps: ['Check publication credential presence', 'Release helper regression tests', 'Packaged JAR verifier regression tests', 'Verify public supported inventory']});
   const latest = new Map();
   for (const job of jobs) if (!latest.has(job.name) || latest.get(job.name).id < job.id) latest.set(job.name, job);
   requireThat(latest.size === required.length, 'Unexpected or incomplete CI job matrix');
@@ -55,11 +55,9 @@ export function verifyModrinth(receipt, version, file) {
 }
 export function verifyCurseForge(receipt, version, file) {
   const loaderName = {fabric: 'Fabric', forge: 'Forge', neoforge: 'NeoForge'}[file.loader];
-  const otherLoaders = ['Fabric', 'Forge', 'NeoForge'].filter(name => name !== loaderName);
   requireThat(receipt.modId === CURSEFORGE_PROJECT && receipt.fileName === file.filename
     && receipt.displayName === displayName(version, file) && receipt.releaseType === 1
-    && receipt.fileLength === file.size && receipt.gameVersions?.includes(file.game)
-    && receipt.gameVersions?.includes(loaderName) && !otherLoaders.some(name => receipt.gameVersions.includes(name))
+    && receipt.fileLength === file.size && sameSet(receipt.gameVersions, [file.game, loaderName, 'Client', 'Server'])
     && receipt.hashes?.some(hash => hash.algo === 1 && hash.value.toLowerCase() === file.hashes.sha1), 'CurseForge metadata/hash mismatch');
 }
 export function findDuplicate(entries, candidates, verify) {
@@ -67,4 +65,44 @@ export function findDuplicate(entries, candidates, verify) {
   requireThat(matches.length <= 1, 'Ambiguous duplicate release versions/files');
   if (matches.length) verify(matches[0]);
   return matches[0];
+}
+export function sectionForVersion(markdown, version) {
+  const escaped = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const exactVersion = new RegExp(`(?:^|[^A-Za-z0-9.])v?${escaped}(?:$|[^A-Za-z0-9.])`);
+  const lines = markdown.split(/\r?\n/);
+  const heading = line => /^(#{1,6})\s+(.+)$/.exec(line.trim());
+  const start = lines.findIndex(line => {
+    const match = heading(line);
+    return match && exactVersion.test(match[2]);
+  });
+  requireThat(start >= 0, `Missing release changelog section for ${version}`);
+  const level = heading(lines[start])[1].length;
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index++) {
+    const match = heading(lines[index]);
+    if (match && match[1].length <= level && /(?:^|[^A-Za-z0-9.])v?\d+\.\d+\.\d+(?:$|[^A-Za-z0-9.])/.test(match[2])) {
+      end = index;
+      break;
+    }
+  }
+  const notes = lines.slice(start + 1, end).join('\n').trim();
+  requireThat(notes.length > 0, 'Empty release changelog');
+  return notes;
+}
+
+export const isDefiniteUploadRejection = status => [400, 401, 403, 404, 405, 413, 415, 422].includes(status);
+export function validateUploadReceipt(receipt, proof, file, platform) {
+  const expected = {schema: 1, repository: REPOSITORY, source_sha: proof.source_sha, ci_run_id: proof.ci_run_id,
+    version: proof.version, filename: file.filename, loader: file.loader, game: file.game, hashes: file.hashes,
+    size: file.size, platform, project_id: platform === 'modrinth' ? MODRINTH_PROJECT : CURSEFORGE_PROJECT};
+  requireThat(Object.keys(expected).every(key => JSON.stringify(receipt[key]) === JSON.stringify(expected[key]))
+    && ['attempting', 'uncertain', 'rejected', 'accepted', 'verified'].includes(receipt.state), 'Recovery receipt source/project/artifact/state mismatch');
+}
+export function mergeUploadReceipts(left, right) {
+  const identity = ['schema', 'repository', 'source_sha', 'ci_run_id', 'version', 'filename', 'loader', 'game', 'hashes', 'size', 'platform', 'project_id'];
+  requireThat(identity.every(key => JSON.stringify(left[key]) === JSON.stringify(right[key])), 'Conflicting recovery receipt identities/hashes');
+  requireThat(!left.remote_id || !right.remote_id || String(left.remote_id) === String(right.remote_id), 'Conflicting recovery remote upload IDs');
+  const rank = {rejected: 0, attempting: 1, uncertain: 2, accepted: 3, verified: 4};
+  const preferred = rank[left.state] >= rank[right.state] ? left : right;
+  return {...preferred, remote_id: preferred.remote_id || left.remote_id || right.remote_id || null};
 }
