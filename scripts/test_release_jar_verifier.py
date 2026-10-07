@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Synthetic ZIP fixtures validate packaging/provenance checks, not gameplay."""
 import copy
+import hashlib
+import io
 import json
 from pathlib import Path
 import struct
@@ -8,6 +10,7 @@ import tempfile
 import unittest
 import zipfile
 from inspect_release_jar import MATRIX, PREFIX, REQUIRED, assemble, inspect
+from download_verified_ci_artifacts import extract_verified
 
 VERSION = '1.3.1'
 SHA = 'a' * 40
@@ -134,6 +137,49 @@ class VerifierTests(unittest.TestCase):
         (artifacts / 'extra.jar').write_bytes(b'extra')
         with self.assertRaisesRegex(ValueError, 'extra or missing JAR'):
             assemble(self.root, artifacts, self.root / 'verified', VERSION, SHA, 123)
+
+class ArchiveVerifierTests(unittest.TestCase):
+    def archive(self, entries, symlink=False):
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, 'w') as archive:
+            for name, value in entries.items():
+                if symlink:
+                    item = zipfile.ZipInfo(name)
+                    item.create_system = 3
+                    item.external_attr = 0o120777 << 16
+                    archive.writestr(item, value)
+                else:
+                    archive.writestr(name, value)
+        data = buffer.getvalue()
+        return data, {'id': 101, 'name': 'fixture', 'digest': 'sha256:' + hashlib.sha256(data).hexdigest()}
+    def test_archive_requires_exact_server_digest(self):
+        data, proof = self.archive({'receipt.json': b'{}'})
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / 'output'
+            extract_verified(data, proof, output)
+            self.assertEqual((output / 'receipt.json').read_bytes(), b'{}')
+        with tempfile.TemporaryDirectory() as temp:
+            for invalid in [{**proof, 'digest': 'sha256:' + 'a' * 64}, {**proof, 'digest': ''}]:
+                with self.assertRaises(ValueError):
+                    extract_verified(data, invalid, Path(temp) / 'output')
+    def test_archive_rejects_unsafe_paths(self):
+        for name in ['../escape.json', '/escape.json', 'sub/receipt.json', 'C:escape.json', 'sub\\receipt.json']:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temp:
+                data, proof = self.archive({name: b'{}'})
+                with self.assertRaisesRegex(ValueError, 'Unsafe artifact ZIP path'):
+                    extract_verified(data, proof, Path(temp) / 'output')
+    def test_archive_rejects_symlinks(self):
+        data, proof = self.archive({'receipt.json': b'/some/target'}, symlink=True)
+        with tempfile.TemporaryDirectory() as temp, self.assertRaisesRegex(ValueError, 'symlink'):
+            extract_verified(data, proof, Path(temp) / 'output')
+    def test_archive_rejects_unexpected_file_sets(self):
+        data, proof = self.archive({'expected.jar': b'jar', 'unexpected.json': b'{}'})
+        with tempfile.TemporaryDirectory() as temp, self.assertRaisesRegex(ValueError, 'Unexpected immutable'):
+            extract_verified(data, proof, Path(temp) / 'output', ['expected.jar', 'provenance.json'])
+    def test_receipt_archive_rejects_non_json(self):
+        data, proof = self.archive({'plugin.jar': b'jar'})
+        with tempfile.TemporaryDirectory() as temp, self.assertRaisesRegex(ValueError, 'Unexpected recovery'):
+            extract_verified(data, proof, Path(temp) / 'output')
 
 if __name__ == '__main__':
     unittest.main()

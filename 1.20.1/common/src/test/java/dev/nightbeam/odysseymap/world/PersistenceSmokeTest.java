@@ -1,5 +1,7 @@
 package dev.nightbeam.odysseymap.world;
 
+import net.minecraft.SharedConstants;
+import net.minecraft.server.Bootstrap;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -16,6 +18,8 @@ public final class PersistenceSmokeTest {
     private PersistenceSmokeTest() {}
 
     public static void main(String[] args) throws Exception {
+        SharedConstants.tryDetectVersion();
+        Bootstrap.bootStrap();
         Path temporary = Files.createTempDirectory("odysseymap-native-smoke-");
         try {
             ResourceKey<Level> overworld = dimension("overworld");

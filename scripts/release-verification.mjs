@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { CURSEFORGE_PROJECT, MODRINTH_PROJECT, MATRIX, REPOSITORY, displayName, filename, requiredBuildSteps, versionNumber } from './release-matrix.mjs';
+import { CURSEFORGE_PROJECT, MODRINTH_PROJECT, MATRIX, REPOSITORY, displayName, filename, requiredBuildSteps, versionNumber, FABRIC_API_MODRINTH, FABRIC_API_CURSEFORGE } from './release-matrix.mjs';
 
 export const hashes = bytes => Object.fromEntries(['sha1', 'sha256', 'sha512'].map(name => [name, crypto.createHash(name).update(bytes).digest('hex')]));
 export const sameSet = (actual, expected) => Array.isArray(actual) && actual.length === expected.length && new Set(actual).size === expected.length && expected.every(value => actual.includes(value));
@@ -13,6 +13,7 @@ export function verifyProvenance(proof, version, sourceSha, ciRunId, readBytes) 
     requireThat(matches.length === 1, 'Missing/duplicate artifact target');
     const file = matches[0];
     requireThat(file.filename === filename(version, target) && file.version === version, 'Artifact filename/version mismatch');
+    requireThat(file.inspection?.environment === 'client' && file.inspection?.fabric_api_required === (target.loader === 'fabric'), 'Packaged environment/dependency inspection mismatch');
     const bytes = readBytes(file.filename);
     const actual = hashes(bytes);
     requireThat(file.size === bytes.length && Object.keys(actual).every(key => actual[key] === file.hashes?.[key]), 'Artifact does not match immutable CI hashes');
@@ -48,7 +49,7 @@ export function verifyModrinth(receipt, version, file) {
   requireThat(receipt.project_id === MODRINTH_PROJECT && receipt.version_number === versionNumber(version, file)
     && receipt.name === displayName(version, file) && receipt.version_type === 'release' && receipt.status === 'listed'
     && sameSet(receipt.game_versions, [file.game]) && sameSet(receipt.loaders, [file.loader])
-    && receipt.dependencies?.length === 0 && receipt.files?.length === 1
+    && receipt.environment === 'client_only' && verifyModrinthDependencies(receipt.dependencies, file) && receipt.files?.length === 1
     && receipt.files[0].primary === true && receipt.files[0].filename === file.filename
     && receipt.files[0].size === file.size && receipt.files[0].hashes?.sha512 === file.hashes.sha512
     && receipt.files[0].hashes?.sha1 === file.hashes.sha1, 'Modrinth metadata/hash mismatch');
@@ -57,7 +58,8 @@ export function verifyCurseForge(receipt, version, file) {
   const loaderName = {fabric: 'Fabric', forge: 'Forge', neoforge: 'NeoForge'}[file.loader];
   requireThat(receipt.modId === CURSEFORGE_PROJECT && receipt.fileName === file.filename
     && receipt.displayName === displayName(version, file) && receipt.releaseType === 1
-    && receipt.fileLength === file.size && sameSet(receipt.gameVersions, [file.game, loaderName, 'Client', 'Server'])
+    && receipt.fileLength === file.size && sameSet(receipt.gameVersions, [file.game, loaderName, 'Client'])
+    && verifyCurseForgeDependencies(receipt.dependencies, file)
     && receipt.hashes?.some(hash => hash.algo === 1 && hash.value.toLowerCase() === file.hashes.sha1), 'CurseForge metadata/hash mismatch');
 }
 export function findDuplicate(entries, candidates, verify) {
@@ -105,4 +107,30 @@ export function mergeUploadReceipts(left, right) {
   const rank = {rejected: 0, attempting: 1, uncertain: 2, accepted: 3, verified: 4};
   const preferred = rank[left.state] >= rank[right.state] ? left : right;
   return {...preferred, remote_id: preferred.remote_id || left.remote_id || right.remote_id || null};
+}
+
+export function modrinthDependencies(file) {
+  return file.loader === 'fabric' ? [{project_id: FABRIC_API_MODRINTH, dependency_type: 'required'}] : [];
+}
+export function verifyModrinthDependencies(dependencies, file) {
+  return Array.isArray(dependencies) && (file.loader === 'fabric'
+    ? dependencies.length === 1 && dependencies[0].project_id === FABRIC_API_MODRINTH
+      && dependencies[0].dependency_type === 'required' && !dependencies[0].version_id && !dependencies[0].file_name
+    : dependencies.length === 0);
+}
+export function verifyCurseForgeDependencies(dependencies, file) {
+  return Array.isArray(dependencies) && (file.loader === 'fabric'
+    ? dependencies.length === 1 && dependencies[0].modId === FABRIC_API_CURSEFORGE && dependencies[0].relationType === 3
+    : dependencies.length === 0);
+}
+export function assertPriorReceiptScope(artifacts, version, sourceSha) {
+  const escaped = version.replaceAll('.', '\\.');
+  const matcher = new RegExp(`^publication-receipts-${escaped}-([a-f0-9]{40})(?:-attempt[1-9][0-9]*)?$`);
+  for (const artifact of artifacts) {
+    const hit = matcher.exec(artifact.name);
+    requireThat(!hit || hit[1] === sourceSha, 'A previous publication journal for this version uses different source/artifact bytes; reconcile it or bump the release version before uploading');
+  }
+}
+export function curseforgeRelations(file) {
+  return {projects: file.loader === 'fabric' ? [{slug: 'fabric-api', projectID: FABRIC_API_CURSEFORGE, type: 'requiredDependency'}] : []};
 }

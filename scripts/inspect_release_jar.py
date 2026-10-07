@@ -125,7 +125,8 @@ def inspect(jar, root, game, loader, java, version):
     return {'filename': name, 'game': game, 'loader': loader, 'java': java,
             'version': version, 'size': jar.stat().st_size, 'hashes': hashes(jar.read_bytes()),
             'inspection': {'metadata': metadata_path, 'class_major_versions': sorted(major_versions),
-                           'persistence_classes': REQUIRED}}
+                           'persistence_classes': REQUIRED, 'environment': 'client',
+                           'fabric_api_required': loader == 'fabric'}}
 
 def assemble(root, artifacts, output, version, source_sha, ci_run_id):
     manifests = sorted(artifacts.rglob('provenance-*.json'))
@@ -134,10 +135,12 @@ def assemble(root, artifacts, output, version, source_sha, ci_run_id):
     files, seen = [], set()
     for path in manifests:
         proof = json.loads(path.read_text())
+        require(proof.get('schema') == 1, 'Unsupported CI provenance schema')
         target = (proof.get('game'), proof.get('loader'), proof.get('java'))
         require(target in expected and target not in seen, 'Unexpected/duplicate release target')
         require(proof.get('source_sha') == source_sha and proof.get('ci_run_id') == ci_run_id
                 and proof.get('version') == version, 'Artifact source/CI run/version mismatch')
+        require(proof.get('filename') == f'odysseymap-{target[1]}-{target[0]}-{version}.jar', 'Unsafe/mismatched CI artifact filename')
         jar = path.parent / proof['filename']
         actual = inspect(jar, root, *target, version)
         require(all(proof.get(key) == value for key, value in actual.items()), 'CI artifact hash/metadata mismatch')

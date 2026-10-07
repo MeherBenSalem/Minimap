@@ -2,6 +2,8 @@
 export const REPOSITORY = 'MeherBenSalem/Minimap';
 export const MODRINTH_PROJECT = 'lLviL6Oq';
 export const CURSEFORGE_PROJECT = 1564458;
+export const FABRIC_API_MODRINTH = 'P7dR8mSH';
+export const FABRIC_API_CURSEFORGE = 306612;
 export const MATRIX = Object.freeze([
   { game: '1.20.1', loader: 'fabric', java: 17 },
   { game: '1.20.1', loader: 'forge', java: 17 },

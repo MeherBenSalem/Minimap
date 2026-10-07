@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check publication credential presence
-        if: ${{ github.event_name == 'push' && github.repository == 'MeherBenSalem/Minimap' && !github.event.repository.fork }}
+        if: ${{ github.event_name == 'push' && github.repository == 'MeherBenSalem/Minimap' }}
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
