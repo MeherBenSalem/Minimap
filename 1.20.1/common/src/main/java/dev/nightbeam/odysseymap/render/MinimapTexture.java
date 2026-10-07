@@ -57,6 +57,8 @@ public class MinimapTexture {
         int halfH = h / 2;
 
         var cache = OdysseyMapClient.getTileCache();
+        boolean changedView = cache.beginRender(new TileCache.RenderView(level.dimension(), w, h,
+                centerX, centerZ, stride, applyShapeMask));
 
         for (int py = 0; py < h; py++) {
             for (int px = 0; px < w; px++) {
@@ -65,12 +67,13 @@ public class MinimapTexture {
 
                 int tileAlignedX = TileCache.alignTile(wx);
                 int tileAlignedZ = TileCache.alignTile(wz);
-                Tile buffer = cache.getOrCreate(level.dimension(), tileAlignedX, tileAlignedZ);
+                Tile buffer = cache.getForRender(level.dimension(), tileAlignedX, tileAlignedZ);
                 int dataX = wx - tileAlignedX + 64;
                 int dataZ = wz - tileAlignedZ + 64;
 
+                if (buffer == null && !changedView) continue;
                 int argb = 0x00000000;
-                if (dataX >= 0 && dataZ >= 0 && dataX < Tile.SIZE && dataZ < Tile.SIZE) {
+                if (buffer != null && dataX >= 0 && dataZ >= 0 && dataX < Tile.SIZE && dataZ < Tile.SIZE) {
                     argb = buffer.getPixel(dataX, dataZ);
                 }
                 if (applyShapeMask) argb = MinimapShape.applyMask(argb, px, py);

@@ -25,7 +25,7 @@ public class ClientEvents {
     }
 
     public void onClientTick(Minecraft mc) {
-        if (mc.player == null || mc.level == null) return;
+        if (!OdysseyMapClient.tickSession(mc)) return;
 
         scanFrameCounter++;
         if (scanFrameCounter >= OdysseyConfig.effectiveScanInterval()) {
@@ -87,7 +87,7 @@ public class ClientEvents {
     }
 
     public void onLevelUnload() {
-        OdysseyMapClient.getTileCache().clear();
+        OdysseyMapClient.unloadLevel();
     }
 
     public void onSleep(LocalPlayer player, BlockPos pos) {

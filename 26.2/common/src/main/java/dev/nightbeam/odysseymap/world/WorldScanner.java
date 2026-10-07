@@ -29,7 +29,6 @@ public class WorldScanner {
 
         if (lastDimension == null || !level.dimension().equals(lastDimension)) {
             lastDimension = level.dimension();
-            tileCache.clear();
             resetSpiral();
         }
 
@@ -55,6 +54,11 @@ public class WorldScanner {
         }
 
         if (spiralQueue.isEmpty()) resetSpiral();
+    }
+
+    public void reset() {
+        lastDimension = null;
+        resetSpiral();
     }
 
     private void resetSpiral() { spiralRadius = 0; spiralIndex = 0; spiralQueue.clear(); }

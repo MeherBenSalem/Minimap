@@ -1,4 +1,27 @@
-﻿# Odyssey Map v1.3.0
+# Odyssey Map v1.3.1
+
+**Release Date:** October 7, 2026
+**Supported MC Versions:** 1.20.1 (Forge/Fabric), 1.21.1 (NeoForge/Fabric), 26.1.2 (NeoForge/Fabric), 26.2 (NeoForge/Fabric)
+
+## Fixes
+
+- Explored terrain is now saved and restored across save/quit, client restarts, dimension changes and reconnects.
+- Singleplayer saves and multiplayer server addresses have separate terrain archives, with complete dimension identifiers keeping dimension data separate.
+- Scanning unloaded chunks no longer erases previously explored terrain.
+- Versioned tile files are replaced atomically. Corrupt or newer-format files are preserved; temporary read/write failures retain new exploration for retry.
+- Large saved map views load progressively with bounded resident tile memory. Completed texture pixels stay visible after tile eviction, and changed views cancel stale requests.
+- New scan results cannot be overwritten by queued older disk reads; recovered writes and edited/evicted tiles refresh the displayed map.
+
+## Upgrade Notes
+
+1. Back up your world and configuration, replace the matching loader JAR, and restart the client.
+2. Keep existing configuration and waypoint files. No configuration reset is required.
+3. Previous versions did not save explored terrain. Areas already discarded by an older session must be revisited once; this update cannot reconstruct them.
+4. Very large archives fill progressively. If storage is unavailable, unsaved exploration remains in memory until it can be written or the client exits.
+5. Multiplayer archives are keyed by the configured server address. A server replacing its world at the same address cannot be automatically distinguished by this client-only storage scheme.
+
+---
+# Odyssey Map v1.3.0
 
 **Release Date:** September 3, 2026  
 **Supported MC Versions:** 1.20.1 (Forge/Fabric), 1.21.1 (NeoForge/Fabric), 26.1.2 (NeoForge/Fabric), 26.2 (NeoForge/Fabric)

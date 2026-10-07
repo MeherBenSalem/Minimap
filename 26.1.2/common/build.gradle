@@ -53,3 +53,17 @@ sourceSets.configureEach {
         }
     }
 }
+
+// Execute storage/cache assertions with real Minecraft classes, without graphics or a running client.
+// The Minecraft development dependency is attached to main; native smoke sources also need it.
+sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
+
+tasks.register('persistenceSmokeTest', JavaExec) {
+    group = 'verification'
+    description = 'Run explored-terrain persistence smoke tests against real Minecraft dependencies.'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass = 'dev.nightbeam.odysseymap.world.PersistenceSmokeTest'
+    enableAssertions = true
+    maxHeapSize = '256m'
+}

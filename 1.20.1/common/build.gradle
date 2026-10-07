@@ -5,6 +5,8 @@ plugins {
 
 legacyForge {
     mcpVersion = minecraft_version
+    // Native smoke tests need the full Minecraft runtime, including vanilla resources.
+    addModdingDependenciesTo(sourceSets.test)
     if (file("src/main/resources/META-INF/accesstransformer.cfg").exists()) {
         accessTransformers = ["src/main/resources/META-INF/accesstransformer.cfg"]
     }
@@ -33,4 +35,17 @@ configurations {
 artifacts {
     commonJava sourceSets.main.java.sourceDirectories.singleFile
     commonResources sourceSets.main.resources.sourceDirectories.singleFile
+}
+
+// The Minecraft development dependency is attached to main; native smoke sources also need it.
+sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
+
+// Verify persistence with this workspace's real Minecraft API and bytecode.
+tasks.register('persistenceSmokeTest', JavaExec) {
+    group = 'verification'
+    description = 'Run terrain persistence smoke checks against actual Minecraft classes.'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.compileClasspath
+    mainClass = 'dev.nightbeam.odysseymap.world.PersistenceSmokeTest'
+    maxHeapSize = '256m'
 }

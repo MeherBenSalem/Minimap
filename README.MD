@@ -33,6 +33,29 @@ $env:JAVA_HOME = $env:JAVA_HOME_21
 
 Built mod JARs are collected under `all-jars/`.
 
+## Explored terrain persistence
+
+Starting with 1.3.1, explored terrain is saved separately for each singleplayer
+save, configured multiplayer server address and dimension. Singleplayer map data
+lives inside the save folder under `odysseymap/tiles-v1/`; multiplayer map data
+lives under `config/odysseymap/maps/servers/`. Existing waypoint/config files are
+unchanged. Previously discarded exploration cannot be reconstructed.
+
+Large saved views load progressively with at most 256 normal resident terrain
+tiles and a small per-tick read budget. Unsaved tiles are retained beyond that
+soft limit when storage fails; exiting before writes recover can lose those
+unsaved changes. A server resetting its world at the same address is not
+automatically distinguishable by this client-only scheme.
+
+## Verification
+
+GitHub CI builds each supported loader/version independently, runs deterministic
+persistence/rendering regressions and real-Minecraft storage smoke checks, and
+inspects the packaged JAR metadata/classes. See
+[the persistence test guide](tests/persistence/README.md) for local checks and the
+in-game restart/dimension/pan validation checklist. Unit and storage smoke tests
+do not claim full in-game visual validation.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).

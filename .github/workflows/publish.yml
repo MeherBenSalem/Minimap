@@ -1,0 +1,200 @@
+# Manual, preflight-first publisher for existing CI artifacts only; never invokes Gradle.
+# A one-release exact-SHA workflow_run opt-in may be added after source/CI review,
+# then removed after all sixteen remote files are publicly hash-verified.
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Full source SHA with successful main-branch CI
+        required: true
+      ci_run_id:
+        description: Optional immutable CI run ID; use the original CI run when recovering uploads
+        required: false
+      version:
+        description: Exact release version from VERSION
+        required: true
+        default: '1.3.1'
+      preflight_only:
+        description: Verify all checks and destinations without uploading
+        type: boolean
+        default: true
+      recovery_run_id:
+        description: Prior Publish run for this exact source/version, to recover accepted-upload receipts
+        required: false
+      verify_only:
+        description: Verify existing uploads only, never upload missing files
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: odyssey-map-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check publication credential presence
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+        run: |
+          python3 - <<'PYTHON'
+          import os
+          names = ['MODRINTH_TOKEN', 'CURSEFORGE_TOKEN', 'CURSEFORGE_API_KEY']
+          missing = []
+          for name in names:
+              present = bool(os.environ.get(name))
+              print(f'{name}: present={str(present).lower()}')
+              if not present:
+                  missing.append(name)
+          if missing:
+              raise SystemExit('Missing GitHub Actions secret names: ' + ', '.join(missing))
+          PYTHON
+      - name: Checkout trusted release verification helpers
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify full CI for the exact release source
+        id: ci
+        uses: actions/github-script@v7
+        env:
+          INPUT_SOURCE_SHA: ${{ inputs.source_sha }}
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_CI_RUN_ID: ${{ inputs.ci_run_id }}
+          RECOVERY_RUN_ID: ${{ inputs.recovery_run_id }}
+        with:
+          script: |
+            const { pathToFileURL } = await import('node:url');
+            const { verifyCiRun, assertPriorReceiptScope } = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/release-verification.mjs`));
+            if (`${context.repo.owner}/${context.repo.repo}` !== 'MeherBenSalem/Minimap') throw new Error('Unexpected publication repository');
+            const sourceSha = context.payload.workflow_run?.head_sha || process.env.INPUT_SOURCE_SHA || context.sha;
+            const version = process.env.INPUT_VERSION || (context.ref.startsWith('refs/tags/v') ? context.ref.substring('refs/tags/v'.length) : '1.3.1');
+            if (!/^[a-f0-9]{40}$/.test(sourceSha) || !/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Expected full source SHA and numeric release version');
+            let run;
+            if (context.payload.workflow_run) {
+              ({data: run} = await github.rest.actions.getWorkflowRun({...context.repo, run_id: context.payload.workflow_run.id}));
+            } else if (process.env.INPUT_CI_RUN_ID) {
+              if (!/^[0-9]+$/.test(process.env.INPUT_CI_RUN_ID)) throw new Error('Invalid CI run ID');
+              ({data: run} = await github.rest.actions.getWorkflowRun({...context.repo, run_id: Number(process.env.INPUT_CI_RUN_ID)}));
+            } else {
+              const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
+                ...context.repo, head_sha: sourceSha, status: 'success', per_page: 100
+              });
+              const candidate = runs.filter(item => item.head_sha === sourceSha && item.path === '.github/workflows/ci.yml'
+                && item.event === 'push' && item.head_branch === 'main' && item.conclusion === 'success').sort((a, b) => b.id - a.id)[0];
+              if (!candidate) throw new Error('No successful full main-branch CI run for the exact source SHA');
+              ({data: run} = await github.rest.actions.getWorkflowRun({...context.repo, run_id: candidate.id}));
+            }
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+              ...context.repo, run_id: run.id, filter: 'all', per_page: 100
+            });
+            verifyCiRun(run, jobs, sourceSha);
+            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+              ...context.repo, run_id: run.id, per_page: 100
+            });
+            const expected = ['1.20.1-fabric', '1.20.1-forge', '1.21.1-fabric', '1.21.1-neoforge',
+              '26.1.2-fabric', '26.1.2-neoforge', '26.2-fabric', '26.2-neoforge'].map(target => `odyssey-${target}-${sourceSha}`);
+            if (artifacts.length !== expected.length || !expected.every(name => artifacts.filter(item => item.name === name && !item.expired).length === 1)) {
+              throw new Error('Expected exactly eight immutable, unexpired CI artifacts');
+            }
+            const ciProof = {source_sha: sourceSha, version, ci_run_id: run.id, ci_run_attempt: run.run_attempt,
+              ci_url: run.html_url, artifacts: artifacts.map(({id, name, digest, size_in_bytes}) => ({id, name, digest, size_in_bytes})),
+              jobs: jobs.map(({id, name, conclusion}) => ({id, name, conclusion}))};
+            const fs = await import('node:fs');
+            fs.mkdirSync('publication-receipts', {recursive: true});
+            fs.writeFileSync('publication-receipts/ci-verification.json', JSON.stringify(ciProof, null, 2));
+            core.setOutput('source_sha', sourceSha);
+            core.setOutput('version', version);
+            core.setOutput('run_id', String(run.id));
+            const recoveryId = process.env.RECOVERY_RUN_ID;
+            if (recoveryId && !/^[0-9]+$/.test(recoveryId)) throw new Error('Invalid recovery run ID');
+            const publicationRuns = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {...context.repo, per_page: 100});
+            const priorRuns = publicationRuns.filter(item => item.path === '.github/workflows/publish.yml'
+              && item.head_repository?.full_name === 'MeherBenSalem/Minimap'
+              && (item.id < context.runId || item.id === context.runId && Number(process.env.GITHUB_RUN_ATTEMPT || '1') > 1));
+            if (recoveryId && !priorRuns.some(item => item.id === Number(recoveryId))) throw new Error('Recovery run must be an earlier run/attempt of this repository publication workflow');
+            const receiptArtifacts = [];
+            const receiptName = `publication-receipts-${version}-${sourceSha}`;
+            for (const prior of priorRuns) {
+              const priorArtifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {...context.repo, run_id: prior.id, per_page: 100});
+              assertPriorReceiptScope(priorArtifacts, version, sourceSha);
+              const exact = priorArtifacts.filter(item => item.name === receiptName || item.name.startsWith(receiptName + '-attempt'));
+              if (exact.some(item => item.expired)) throw new Error('Prior exact-release receipts have expired; reconcile prior uploads before publication');
+              const hasIdentifiedOtherRelease = priorArtifacts.some(item => /^publication-receipts-[0-9]+\.[0-9]+\.[0-9]+-[a-f0-9]{40}(?:-attempt[1-9][0-9]*)?$/.test(item.name));
+              if (!exact.length && !hasIdentifiedOtherRelease) {
+                const priorJobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {...context.repo, run_id: prior.id, filter: 'all', per_page: 100});
+                if (priorJobs.some(job => job.steps?.some(step => step.name === 'Preflight both destinations, publish missing files and verify public hashes'
+                    && step.started_at && step.conclusion !== 'skipped'))) {
+                  throw new Error('A previous publication attempt started without retained receipts; reconcile it before any upload retry');
+                }
+              }
+              for (const artifact of exact) receiptArtifacts.push({id: artifact.id, name: artifact.name, digest: artifact.digest, run_id: prior.id});
+              if (prior.id === Number(recoveryId) && !exact.length) throw new Error('Requested recovery run has no exact-release receipt artifact');
+            }
+            const uniqueReceipts = [...new Map(receiptArtifacts.map(item => [item.id, item])).values()];
+            if (uniqueReceipts.length) fs.writeFileSync('publication-receipts/recovery-artifacts.json', JSON.stringify({source_sha: sourceSha, version, artifacts: uniqueReceipts}, null, 2));
+            core.setOutput('recover_receipts', uniqueReceipts.length ? 'true' : 'false');
+            core.info(`All eight build/test/smoke/package jobs and release validation passed for ${sourceSha}; immutable CI run ${run.id}`);
+      - name: Checkout exact verified source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.ci.outputs.source_sha }}
+          persist-credentials: false
+          path: release-source
+      - name: Download and enforce immutable CI archive digests
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 release-source/scripts/download_verified_ci_artifacts.py \
+            --proof publication-receipts/ci-verification.json --output ci-artifacts
+      - name: Recover all prior exact-release publication journals
+        if: ${{ steps.ci.outputs.recover_receipts == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 release-source/scripts/download_verified_ci_artifacts.py \
+            --proof publication-receipts/recovery-artifacts.json --output recovery-receipts --receipts
+      - name: Reinspect all exact-source CI artifacts and provenance
+        env:
+          SOURCE_SHA: ${{ steps.ci.outputs.source_sha }}
+          CI_RUN_ID: ${{ steps.ci.outputs.run_id }}
+          VERSION: ${{ steps.ci.outputs.version }}
+        run: |
+          test "$(tr -d '\r\n' < release-source/VERSION)" = "$VERSION"
+          python3 release-source/scripts/inspect_release_jar.py \
+            --root release-source --version "$VERSION" --source-sha "$SOURCE_SHA" --ci-run-id "$CI_RUN_ID" \
+            --assemble ci-artifacts --output verified-release
+      - name: Preflight both destinations, publish missing files and verify public hashes
+        env:
+          SOURCE_SHA: ${{ steps.ci.outputs.source_sha }}
+          CI_RUN_ID: ${{ steps.ci.outputs.run_id }}
+          VERSION: ${{ steps.ci.outputs.version }}
+          ARTIFACT_DIRECTORY: ${{ github.workspace }}/verified-release
+          RECEIPT_DIRECTORY: ${{ github.workspace }}/publication-receipts
+          RECOVERY_RECEIPTS: ${{ steps.ci.outputs.recover_receipts == 'true' && format('{0}/recovery-receipts', github.workspace) || '' }}
+          PREFLIGHT_ONLY: ${{ inputs.preflight_only && 'true' || 'false' }}
+          VERIFY_ONLY: ${{ inputs.verify_only && 'true' || 'false' }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+        run: node release-source/scripts/publish_verified_release.mjs
+      - name: Preserve all publication and accepted-upload receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: publication-receipts-${{ steps.ci.outputs.version }}-${{ steps.ci.outputs.source_sha }}-attempt${{ github.run_attempt }}
+          path: publication-receipts/*
+          if-no-files-found: ignore
+          retention-days: 90
