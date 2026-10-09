@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: '24'
       - name: Release helper regression tests
-        run: node --test scripts/release-verification.test.mjs
+        run: node --test scripts/release-verification.test.mjs scripts/publisher-recovery.test.mjs
       - name: Packaged JAR verifier regression tests
         run: python3 scripts/test_release_jar_verifier.py
       - name: Verify public supported inventory

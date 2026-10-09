@@ -16,6 +16,14 @@ on:
         description: Exact release version from VERSION
         required: true
         default: '1.3.1'
+      platform:
+        description: Destination platform; other platforms are never read or uploaded
+        type: choice
+        options: [both, modrinth, curseforge]
+        default: both
+      browser_receipts_json:
+        description: Optional additional exact-source browser receipt bundle; no credentials
+        required: false
       preflight_only:
         description: Verify all checks and destinations without uploading
         type: boolean
@@ -43,13 +51,18 @@ jobs:
     steps:
       - name: Check publication credential presence
         env:
+          PUBLISH_PLATFORM: ${{ inputs.platform || 'both' }}
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
         run: |
           python3 - <<'PYTHON'
           import os
-          names = ['MODRINTH_TOKEN', 'CURSEFORGE_TOKEN', 'CURSEFORGE_API_KEY']
+          platform = os.environ.get('PUBLISH_PLATFORM', 'both')
+          if platform not in ('both', 'modrinth', 'curseforge'):
+              raise SystemExit('Invalid publication platform')
+          names = (['MODRINTH_TOKEN'] if platform in ('both', 'modrinth') else [])
+          names += (['CURSEFORGE_TOKEN', 'CURSEFORGE_API_KEY'] if platform in ('both', 'curseforge') else [])
           missing = []
           for name in names:
               present = bool(os.environ.get(name))
@@ -135,7 +148,8 @@ jobs:
               const hasIdentifiedOtherRelease = priorArtifacts.some(item => /^publication-receipts-[0-9]+\.[0-9]+\.[0-9]+-[a-f0-9]{40}(?:-attempt[1-9][0-9]*)?$/.test(item.name));
               if (!exact.length && !hasIdentifiedOtherRelease) {
                 const priorJobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {...context.repo, run_id: prior.id, filter: 'all', per_page: 100});
-                if (priorJobs.some(job => job.steps?.some(step => step.name === 'Preflight both destinations, publish missing files and verify public hashes'
+                if (priorJobs.some(job => job.steps?.some(step => ['Preflight both destinations, publish missing files and verify public hashes',
+                    'Preflight selected destinations, publish missing files and verify public hashes'].includes(step.name)
                     && step.started_at && step.conclusion !== 'skipped'))) {
                   throw new Error('A previous publication attempt started without retained receipts; reconcile it before any upload retry');
                 }
@@ -176,11 +190,15 @@ jobs:
           python3 release-source/scripts/inspect_release_jar.py \
             --root release-source --version "$VERSION" --source-sha "$SOURCE_SHA" --ci-run-id "$CI_RUN_ID" \
             --assemble ci-artifacts --output verified-release
-      - name: Preflight both destinations, publish missing files and verify public hashes
+      - name: Preflight selected destinations, publish missing files and verify public hashes
         env:
           SOURCE_SHA: ${{ steps.ci.outputs.source_sha }}
           CI_RUN_ID: ${{ steps.ci.outputs.run_id }}
           VERSION: ${{ steps.ci.outputs.version }}
+          PUBLISH_PLATFORM: ${{ inputs.platform || 'both' }}
+          PUBLISHER_CONTROLLER_SHA: ${{ github.sha }}
+          BROWSER_RECEIPTS_JSON: ${{ inputs.browser_receipts_json }}
+          RELEASE_SOURCE_DIRECTORY: ${{ github.workspace }}/release-source
           ARTIFACT_DIRECTORY: ${{ github.workspace }}/verified-release
           RECEIPT_DIRECTORY: ${{ github.workspace }}/publication-receipts
           RECOVERY_RECEIPTS: ${{ steps.ci.outputs.recover_receipts == 'true' && format('{0}/recovery-receipts', github.workspace) || '' }}
@@ -189,7 +207,7 @@ jobs:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
-        run: node release-source/scripts/publish_verified_release.mjs
+        run: node scripts/publish_verified_release.mjs
       - name: Preserve all publication and accepted-upload receipts
         if: always()
         uses: actions/upload-artifact@v4

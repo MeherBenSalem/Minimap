@@ -1,0 +1,169 @@
+{
+  "schema": 1,
+  "repository": "MeherBenSalem/Minimap",
+  "source_sha": "682314d63e452e092ee33749fb6d49a7531c7031",
+  "ci_run_id": 37650417171,
+  "version": "1.3.1",
+  "receipts": [
+    {
+      "schema": 1,
+      "repository": "MeherBenSalem/Minimap",
+      "source_sha": "682314d63e452e092ee33749fb6d49a7531c7031",
+      "ci_run_id": 37650417171,
+      "version": "1.3.1",
+      "filename": "odysseymap-fabric-1.20.1-1.3.1.jar",
+      "loader": "fabric",
+      "game": "1.20.1",
+      "hashes": {
+        "sha1": "7126a0570efb1483b31ee002d846add23e37e06b",
+        "sha256": "27fc888a3f95b3a774686aa3f2648206212d485ab649f8e801b63f0c192f16fd",
+        "sha512": "5a1f6a6c2b55d9dd98b7f82cc1fa060a785af4b5e4f0aad55640bc10106373fb024779acf4374f6a2ec14553a63a83f8b78891c20db57428090066b72a16fcd4"
+      },
+      "size": 134635,
+      "platform": "curseforge",
+      "project_id": 1564458,
+      "state": "accepted",
+      "remote_id": 9107034
+    },
+    {
+      "schema": 1,
+      "repository": "MeherBenSalem/Minimap",
+      "source_sha": "682314d63e452e092ee33749fb6d49a7531c7031",
+      "ci_run_id": 37650417171,
+      "version": "1.3.1",
+      "filename": "odysseymap-fabric-1.21.1-1.3.1.jar",
+      "loader": "fabric",
+      "game": "1.21.1",
+      "hashes": {
+        "sha1": "a91ff94c5f89d1b137a6f597b4a29b29b4357c5c",
+        "sha256": "207d9610f1990d907befee914de1cd183d54d55e1dd3466633eb39b8acacb52c",
+        "sha512": "324e9f1016e8fcdcc40d158d525a30ef4231d99eb1bb8a81ea264481c331729502bf310c6a86255435207db7cd93f6d10645ba50c1661b59324960b25d25a844"
+      },
+      "size": 134955,
+      "platform": "curseforge",
+      "project_id": 1564458,
+      "state": "accepted",
+      "remote_id": 9107058
+    },
+    {
+      "schema": 1,
+      "repository": "MeherBenSalem/Minimap",
+      "source_sha": "682314d63e452e092ee33749fb6d49a7531c7031",
+      "ci_run_id": 37650417171,
+      "version": "1.3.1",
+      "filename": "odysseymap-fabric-26.1.2-1.3.1.jar",
+      "loader": "fabric",
+      "game": "26.1.2",
+      "hashes": {
+        "sha1": "205ae89361cff36a6d2fcc74d1ccc597af417421",
+        "sha256": "2bd1490a26f6c4297835972c75d7ff512f6595ef110ebf8ef4fb773f1d5e9dc9",
+        "sha512": "e7dbc13a6cc6bd06aa33392fb0efe34e70e704041ab4a63b55020d11255a243d82ec90c06c2c0714ec59aa449ebf25201debd69e1649d798b84a5c369f4687c1"
+      },
+      "size": 136264,
+      "platform": "curseforge",
+      "project_id": 1564458,
+      "state": "accepted",
+      "remote_id": 9107069
+    },
+    {
+      "schema": 1,
+      "repository": "MeherBenSalem/Minimap",
+      "source_sha": "682314d63e452e092ee33749fb6d49a7531c7031",
+      "ci_run_id": 37650417171,
+      "version": "1.3.1",
+      "filename": "odysseymap-fabric-26.2-1.3.1.jar",
+      "loader": "fabric",
+      "game": "26.2",
+      "hashes": {
+        "sha1": "8c063408cae02ba1f13e2e6ea1c2342a3e5c86c0",
+        "sha256": "13739b9ddbaffcac2bda369316b9f7ee6b6691ddc7d402b9aebcc5f63397111a",
+        "sha512": "eeed1260325bfd062ebe71f7b5f8a0174bc2d422cbf0195231f610bf83eba611b3a3c4262a921a5e3a6de1edd5d90cebce6d14551f8089cfcd316d1698f2a7c6"
+      },
+      "size": 137161,
+      "platform": "curseforge",
+      "project_id": 1564458,
+      "state": "uncertain",
+      "remote_id": null
+    },
+    {
+      "schema": 1,
+      "repository": "MeherBenSalem/Minimap",
+      "source_sha": "682314d63e452e092ee33749fb6d49a7531c7031",
+      "ci_run_id": 37650417171,
+      "version": "1.3.1",
+      "filename": "odysseymap-forge-1.20.1-1.3.1.jar",
+      "loader": "forge",
+      "game": "1.20.1",
+      "hashes": {
+        "sha1": "004af971d8b991621e4c0b8c41a72f51bf5d32e5",
+        "sha256": "19743f4c3b362aabc46d5a34dc1393e73120703d32dcd5afa540870e58c0aee8",
+        "sha512": "471a1d0d885d062496d911a091614cedafd8ffc9547456adb41eec47da8b5a25facd72dbe734a292777ebbef172a76b0dee04764e9cb711da95c186c97b5f7e6"
+      },
+      "size": 132579,
+      "platform": "curseforge",
+      "project_id": 1564458,
+      "state": "accepted",
+      "remote_id": 9107119
+    },
+    {
+      "schema": 1,
+      "repository": "MeherBenSalem/Minimap",
+      "source_sha": "682314d63e452e092ee33749fb6d49a7531c7031",
+      "ci_run_id": 37650417171,
+      "version": "1.3.1",
+      "filename": "odysseymap-neoforge-1.21.1-1.3.1.jar",
+      "loader": "neoforge",
+      "game": "1.21.1",
+      "hashes": {
+        "sha1": "2efdd5fe34d14e8b8272ab1138f55977e9de4574",
+        "sha256": "24fcfeee28094e21721bef94df7a4ecd8d474d1127570875af6f5a87c39f1566",
+        "sha512": "b0f8281bd39d83065d6d7e9f5a07ce1dd8c923836674023860e570ba35718cc7b5b92cbc732696249537f3538ce7bd1d691d80d5596c937d4565e3d42c99ed6d"
+      },
+      "size": 131999,
+      "platform": "curseforge",
+      "project_id": 1564458,
+      "state": "accepted",
+      "remote_id": 9107141
+    },
+    {
+      "schema": 1,
+      "repository": "MeherBenSalem/Minimap",
+      "source_sha": "682314d63e452e092ee33749fb6d49a7531c7031",
+      "ci_run_id": 37650417171,
+      "version": "1.3.1",
+      "filename": "odysseymap-neoforge-26.1.2-1.3.1.jar",
+      "loader": "neoforge",
+      "game": "26.1.2",
+      "hashes": {
+        "sha1": "47eea65a932707d386943e9f0fbb96d9c1b21c61",
+        "sha256": "6b738fc2c7e08dcb2c8dcb86254a552e2cb4780a40c5255d26ac6b99125cfebf",
+        "sha512": "9042e4f37a75748ccb0af8bc155648313ab9f6bebc10412051e9f46ce60b97f75cf4d1d5cd29d57cbee054a089db5860159cc207e9ecdb0fd858d63fc32b58e4"
+      },
+      "size": 134232,
+      "platform": "curseforge",
+      "project_id": 1564458,
+      "state": "accepted",
+      "remote_id": 9107169
+    },
+    {
+      "schema": 1,
+      "repository": "MeherBenSalem/Minimap",
+      "source_sha": "682314d63e452e092ee33749fb6d49a7531c7031",
+      "ci_run_id": 37650417171,
+      "version": "1.3.1",
+      "filename": "odysseymap-neoforge-26.2-1.3.1.jar",
+      "loader": "neoforge",
+      "game": "26.2",
+      "hashes": {
+        "sha1": "2e60ca851a52147b595351f97052856f323d1a00",
+        "sha256": "f6be968d775f200281f56b268d1715206b913647f51a26c0081202ce8aeab4d7",
+        "sha512": "7f6c4f164ff00ff03468c8402ab294a0f4ac39851c05b93a4f091643110c4bcacdbfa1d5415352ab8c4c76d31adbebee4f4316656ffa0d93fc5a30680aae7899"
+      },
+      "size": 135126,
+      "platform": "curseforge",
+      "project_id": 1564458,
+      "state": "accepted",
+      "remote_id": 9107177
+    }
+  ]
+}
