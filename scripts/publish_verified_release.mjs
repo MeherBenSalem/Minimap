@@ -1,12 +1,12 @@
 /** Publish only the eight immutable, inspected artifacts downloaded from exact-SHA CI.
- * Credentials are read from GitHub Actions environment variables only. Never reads local secrets.
+ * Credentials are read from environment variables only. Never reads credential files or logs values.
  * POST uploads are intentionally not retried: an uncertain upload must be reconciled first.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CURSEFORGE_PROJECT, MODRINTH_PROJECT, REPOSITORY, displayName, versionNumber, FABRIC_API_MODRINTH, FABRIC_API_CURSEFORGE } from './release-matrix.mjs';
-import { hashes, requireThat, verifyProvenance, verifyModrinthProject, verifyCurseForgeProject, verifyModrinth, verifyCurseForge, findDuplicate, sectionForVersion, isDefiniteUploadRejection, validateUploadReceipt, mergeUploadReceipts, modrinthDependencies, curseforgeRelations } from './release-verification.mjs';
+import { hashes, requireThat, verifyProvenance, verifyModrinthProject, verifyCurseForgeProject, verifyModrinth, verifyCurseForge, findDuplicate, sectionForVersion, isDefiniteUploadRejection, validateUploadReceipt, mergeUploadReceipts, assertPriorReceiptScope, modrinthDependencies, curseforgeRelations } from './release-verification.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 class ReadError extends Error { constructor(url, status) { super(`Read failed (${status}): ${url}`); this.status = status; } }
@@ -25,8 +25,8 @@ function writeJson(directory, name, value) {
   fs.writeFileSync(destination + '.tmp', JSON.stringify(value, null, 2) + '\n');
   fs.renameSync(destination + '.tmp', destination);
 }
-function changelog(version) {
-  return sectionForVersion(fs.readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8'), version);
+function changelog(version, sourceDirectory = root) {
+  return sectionForVersion(fs.readFileSync(path.join(sourceDirectory, 'CHANGELOG.md'), 'utf8'), version);
 }
 
 const receiptName = (platform, file) => `${platform}-${file.loader}-${file.game}.json`;
@@ -59,12 +59,64 @@ export function recoverUploadReceipts(proof, receipts, recovery) {
   }
 }
 
+export function selectPlatforms(value = 'both') {
+  requireThat(['both', 'modrinth', 'curseforge'].includes(value), 'PUBLISH_PLATFORM must be both, modrinth or curseforge');
+  return value === 'both' ? ['modrinth', 'curseforge'] : [value];
+}
+export function requiredSecretNames(platforms) {
+  requireThat(Array.isArray(platforms) && platforms.length && new Set(platforms).size === platforms.length
+    && platforms.every(platform => ['modrinth', 'curseforge'].includes(platform)), 'Invalid publication platforms');
+  return [...(platforms.includes('modrinth') ? ['MODRINTH_TOKEN'] : []),
+    ...(platforms.includes('curseforge') ? ['CURSEFORGE_TOKEN', 'CURSEFORGE_API_KEY'] : [])];
+}
+export function importBrowserReceipts(proof, receipts, input) {
+  if (!input) return;
+  let bundle;
+  try { bundle = typeof input === 'string' ? JSON.parse(input) : input; }
+  catch { throw new Error('Browser receipt bundle must be valid JSON; do not include credentials.'); }
+  requireThat(bundle && bundle.schema === 1 && bundle.repository === REPOSITORY
+    && bundle.source_sha === proof.source_sha && bundle.ci_run_id === proof.ci_run_id && bundle.version === proof.version
+    && Array.isArray(bundle.receipts), 'Browser receipt bundle source/repository/version mismatch');
+  const identities = new Set();
+  // Validate the entire import before retaining any receipt. Existing journals only upgrade.
+  const validated = bundle.receipts.map(receipt => {
+    const file = proof.files.find(file => file.filename === receipt.filename);
+    requireThat(file && ['modrinth', 'curseforge'].includes(receipt.platform), 'Browser receipt artifact/platform mismatch');
+    validateUploadReceipt(receipt, proof, file, receipt.platform);
+    const id = receipt.remote_id;
+    const validId = receipt.platform === 'curseforge' ? Number.isSafeInteger(id) && id > 0
+      : typeof id === 'string' && /^[A-Za-z0-9]+$/.test(id);
+    requireThat(id == null || validId, 'Browser receipt remote ID has an invalid platform format');
+    requireThat(!['accepted', 'verified'].includes(receipt.state) || validId, 'Accepted browser receipt requires an immutable remote ID');
+    const name = receiptName(receipt.platform, file);
+    requireThat(!identities.has(name), 'Duplicate browser receipt identity');
+    identities.add(name);
+    // Import only the immutable recovery identity/state, never arbitrary input fields.
+    const normalized = Object.fromEntries(['schema', 'repository', 'source_sha', 'ci_run_id', 'version',
+      'filename', 'loader', 'game', 'hashes', 'size', 'platform', 'project_id', 'state', 'remote_id']
+      .map(key => [key, receipt[key]]));
+    normalized.method = 'browser_recovery';
+    const currentPath = path.join(receipts, name);
+    if (!fs.existsSync(currentPath)) return {name, value: normalized};
+    const current = JSON.parse(fs.readFileSync(currentPath, 'utf8'));
+    validateUploadReceipt(current, proof, file, receipt.platform);
+    return {name, value: mergeUploadReceipts(current, normalized)};
+  });
+  for (const {name, value} of validated) writeJson(receipts, name, value);
+}
+
 export async function main() {
+  const controllerSha = process.env.PUBLISHER_CONTROLLER_SHA || null;
+  requireThat(!controllerSha || /^[a-f0-9]{40}$/.test(controllerSha), 'Publisher controller SHA must be a full commit SHA');
+  const platforms = selectPlatforms(process.env.PUBLISH_PLATFORM || 'both');
+  const publishMr = platforms.includes('modrinth');
+  const publishCf = platforms.includes('curseforge');
   const version = process.env.VERSION;
   const sourceSha = process.env.SOURCE_SHA;
   const ciRunId = Number(process.env.CI_RUN_ID);
   requireThat(/^\d+\.\d+\.\d+$/.test(version || ''), 'VERSION is required');
-  requireThat(fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim() === version, 'Checked source release version mismatch');
+  const sourceDirectory = path.resolve(process.env.RELEASE_SOURCE_DIRECTORY || root);
+  requireThat(fs.readFileSync(path.join(sourceDirectory, 'VERSION'), 'utf8').trim() === version, 'Checked source release version mismatch');
   const directory = path.resolve(process.env.ARTIFACT_DIRECTORY || 'verified-release');
   const proof = JSON.parse(fs.readFileSync(path.join(directory, 'release-provenance.json'), 'utf8'));
   verifyProvenance(proof, version, sourceSha, ciRunId, name => fs.readFileSync(path.join(directory, name)));
@@ -87,78 +139,100 @@ export async function main() {
     project_id: platform === 'modrinth' ? MODRINTH_PROJECT : CURSEFORGE_PROJECT, recorded_at: new Date().toISOString(), ...fields});
   writeJson(receipts, 'release-provenance.json', proof);
   recoverUploadReceipts(proof, receipts, recovery);
-  const secretNames = ['MODRINTH_TOKEN', 'CURSEFORGE_TOKEN', 'CURSEFORGE_API_KEY'];
+  const browserReceiptDirectory = path.join(root, 'publication-recovery');
+  if (fs.existsSync(browserReceiptDirectory)) {
+    const baselines = fs.readdirSync(browserReceiptDirectory, {withFileTypes: true})
+      .filter(entry => entry.isFile() && entry.name.endsWith('.json'))
+      .map(entry => ({name: `publication-receipts-${entry.name.slice(0, -5)}`}));
+    assertPriorReceiptScope(baselines, version, sourceSha);
+  }
+  const boundBrowserReceipts = path.join(browserReceiptDirectory, `${version}-${sourceSha}.json`);
+  if (fs.existsSync(boundBrowserReceipts)) importBrowserReceipts(proof, receipts, fs.readFileSync(boundBrowserReceipts, 'utf8'));
+  requireThat(!(process.env.BROWSER_RECEIPTS_JSON && process.env.BROWSER_RECEIPTS_FILE), 'Choose one browser receipt import source');
+  importBrowserReceipts(proof, receipts, process.env.BROWSER_RECEIPTS_JSON
+    || (process.env.BROWSER_RECEIPTS_FILE ? fs.readFileSync(process.env.BROWSER_RECEIPTS_FILE, 'utf8') : null));
+  const secretNames = requiredSecretNames(platforms);
   const missing = secretNames.filter(name => !process.env[name]);
   requireThat(!missing.length, `Missing GitHub Actions secrets: ${missing.join(', ')}. Check presence/permissions; do not send values.`);
   const mrHeaders = {Authorization: process.env.MODRINTH_TOKEN, 'User-Agent': 'NightBeam-OdysseyMap-release'};
   const cfHeaders = {'x-api-key': process.env.CURSEFORGE_API_KEY};
   const uploadHeaders = {'X-Api-Token': process.env.CURSEFORGE_TOKEN};
-  const notes = changelog(version);
+  const notes = changelog(version, sourceDirectory);
 
 
   // Every project, credential, tag and duplicate is preflighted before the first upload.
-  const [mrProject, cfResponse, gameTags, loaderTags, cfTagResponse, mrUser] = await Promise.all([
-    json(`https://api.modrinth.com/v2/project/${MODRINTH_PROJECT}`, mrHeaders),
-    json(`https://api.curseforge.com/v1/mods/${CURSEFORGE_PROJECT}`, cfHeaders),
-    json('https://api.modrinth.com/v2/tag/game_version', mrHeaders),
-    json('https://api.modrinth.com/v2/tag/loader', mrHeaders),
-    json('https://minecraft.curseforge.com/api/game/versions', uploadHeaders),
-    json('https://api.modrinth.com/v2/user', mrHeaders),
-  ]);
-  verifyModrinthProject(mrProject);
-  verifyCurseForgeProject(cfResponse.data);
-  const [projectTeam, organization] = await Promise.all([
-    json(`https://api.modrinth.com/v2/team/${mrProject.team}/members`, mrHeaders),
-    json(`https://api.modrinth.com/v3/organization/${mrProject.organization}`, mrHeaders),
-  ]);
-  requireThat(organization.id === 'SVDVsyjd' && organization.slug === 'nightbeam', 'Modrinth organization mismatch');
-  const organizationTeam = Array.isArray(organization.members) ? organization.members
-    : organization.team_id ? await json(`https://api.modrinth.com/v2/team/${organization.team_id}/members`, mrHeaders) : [];
-  requireThat([...projectTeam, ...organizationTeam].some(member => member.accepted !== false && member.user?.id === mrUser.id), 'Authenticated Modrinth user is not an accepted destination team member');
-  const cfTags = Array.isArray(cfTagResponse) ? cfTagResponse : cfTagResponse.data;
-  requireThat(Array.isArray(cfTags), 'Invalid CurseForge game-version inventory');
+  let mrProject, cfResponse, gameTags, loaderTags, cfTagResponse, mrUser, organization;
+  if (publishMr) {
+    [mrProject, gameTags, loaderTags, mrUser] = await Promise.all([
+      json(`https://api.modrinth.com/v2/project/${MODRINTH_PROJECT}`, mrHeaders),
+      json('https://api.modrinth.com/v2/tag/game_version', mrHeaders),
+      json('https://api.modrinth.com/v2/tag/loader', mrHeaders),
+      json('https://api.modrinth.com/v2/user', mrHeaders),
+    ]);
+    verifyModrinthProject(mrProject);
+    const [projectTeam, destinationOrganization] = await Promise.all([
+      json(`https://api.modrinth.com/v2/team/${mrProject.team}/members`, mrHeaders),
+      json(`https://api.modrinth.com/v3/organization/${mrProject.organization}`, mrHeaders),
+    ]);
+    organization = destinationOrganization;
+    requireThat(organization.id === 'SVDVsyjd' && organization.slug === 'nightbeam', 'Modrinth organization mismatch');
+    const organizationTeam = Array.isArray(organization.members) ? organization.members
+      : organization.team_id ? await json(`https://api.modrinth.com/v2/team/${organization.team_id}/members`, mrHeaders) : [];
+    requireThat([...projectTeam, ...organizationTeam].some(member => member.accepted !== false && member.user?.id === mrUser.id), 'Authenticated Modrinth user is not an accepted destination team member');
+  }
+  if (publishCf) {
+    [cfResponse, cfTagResponse] = await Promise.all([
+      json(`https://api.curseforge.com/v1/mods/${CURSEFORGE_PROJECT}`, cfHeaders),
+      json('https://minecraft.curseforge.com/api/game/versions', uploadHeaders),
+    ]);
+    verifyCurseForgeProject(cfResponse.data);
+  }
+  const cfTags = publishCf ? (Array.isArray(cfTagResponse) ? cfTagResponse : cfTagResponse.data) : [];
+  requireThat(!publishCf || Array.isArray(cfTags), 'Invalid CurseForge game-version inventory');
   const uniqueCfTag = name => {
     const hits = cfTags.filter(tag => tag.name === name);
     requireThat(hits.length === 1 && Number.isInteger(hits[0].id), `Missing/ambiguous CurseForge tag: ${name}`);
     return hits[0].id;
   };
   // All packaged entrypoints/dependencies are client-only; a server install is unsupported.
-  const environmentIds = ['Client'].map(uniqueCfTag);
+  const environmentIds = publishCf ? ['Client'].map(uniqueCfTag) : [];
   const loaderNames = {fabric: 'Fabric', forge: 'Forge', neoforge: 'NeoForge'};
   const knownLoaderIds = {fabric: 7499, forge: 7498, neoforge: 10150};
   const tagIds = new Map();
   for (const file of files) {
-    requireThat(gameTags.some(tag => tag.version === file.game && tag.version_type === 'release')
+    if (publishMr) requireThat(gameTags.some(tag => tag.version === file.game && tag.version_type === 'release')
       && loaderTags.some(tag => tag.name === file.loader && tag.supported_project_types.includes('mod')), 'Unsupported Modrinth game/loader tag');
-    const loaderId = uniqueCfTag(loaderNames[file.loader]);
-    requireThat(loaderId === knownLoaderIds[file.loader], 'CurseForge loader inventory ID changed; review before upload');
-    tagIds.set(file.filename, [...environmentIds, loaderId, uniqueCfTag(file.game)]);
+    if (publishCf) {
+      const loaderId = uniqueCfTag(loaderNames[file.loader]);
+      requireThat(loaderId === knownLoaderIds[file.loader], 'CurseForge loader inventory ID changed; review before upload');
+      tagIds.set(file.filename, [...environmentIds, loaderId, uniqueCfTag(file.game)]);
+    }
   }
   const fabricFiles = files.filter(file => file.loader === 'fabric');
-  if (fabricFiles.length) {
-    const [mrApi, cfApi] = await Promise.all([
-      json(`https://api.modrinth.com/v2/project/${FABRIC_API_MODRINTH}`, mrHeaders),
-      json(`https://api.curseforge.com/v1/mods/${FABRIC_API_CURSEFORGE}`, cfHeaders),
-    ]);
+  if (fabricFiles.length && publishMr) {
+    const mrApi = await json(`https://api.modrinth.com/v2/project/${FABRIC_API_MODRINTH}`, mrHeaders);
     requireThat(mrApi.id === FABRIC_API_MODRINTH && mrApi.slug === 'fabric-api' && mrApi.title === 'Fabric API'
       && mrApi.source_url === 'https://github.com/FabricMC/fabric' && mrApi.status === 'approved', 'Fabric API Modrinth dependency identity mismatch');
+    for (const file of fabricFiles) {
+      const available = await json(`https://api.modrinth.com/v2/project/${FABRIC_API_MODRINTH}/version?loaders=${encodeURIComponent('["fabric"]')}&game_versions=${encodeURIComponent(JSON.stringify([file.game]))}`, mrHeaders);
+      requireThat(available.some(entry => entry.project_id === FABRIC_API_MODRINTH && entry.game_versions?.includes(file.game)
+        && entry.loaders?.includes('fabric') && entry.status === 'listed' && entry.version_type === 'release'), `No available Fabric API Modrinth dependency for ${file.game}`);
+    }
+  }
+  if (fabricFiles.length && publishCf) {
+    const cfApi = await json(`https://api.curseforge.com/v1/mods/${FABRIC_API_CURSEFORGE}`, cfHeaders);
     requireThat(cfApi.data?.id === FABRIC_API_CURSEFORGE && cfApi.data.slug === 'fabric-api' && cfApi.data.name === 'Fabric API'
       && cfApi.data.gameId === 432 && cfApi.data.links?.sourceUrl === 'https://github.com/FabricMC/fabric'
       && cfApi.data.authors?.some(author => author.name === 'modmuss50'), 'Fabric API CurseForge dependency identity mismatch');
     for (const file of fabricFiles) {
-      const [mrAvailable, cfAvailable] = await Promise.all([
-        json(`https://api.modrinth.com/v2/project/${FABRIC_API_MODRINTH}/version?loaders=${encodeURIComponent('["fabric"]')}&game_versions=${encodeURIComponent(JSON.stringify([file.game]))}`, mrHeaders),
-        json(`https://api.curseforge.com/v1/mods/${FABRIC_API_CURSEFORGE}/files?gameVersion=${encodeURIComponent(file.game)}&modLoaderType=4&pageSize=50`, cfHeaders),
-      ]);
-      requireThat(mrAvailable.some(entry => entry.project_id === FABRIC_API_MODRINTH && entry.game_versions?.includes(file.game)
-        && entry.loaders?.includes('fabric') && entry.status === 'listed' && entry.version_type === 'release'), `No available Fabric API Modrinth dependency for ${file.game}`);
-      requireThat(cfAvailable.data?.some(entry => entry.modId === FABRIC_API_CURSEFORGE && entry.gameVersions?.includes(file.game)
+      const available = await json(`https://api.curseforge.com/v1/mods/${FABRIC_API_CURSEFORGE}/files?gameVersion=${encodeURIComponent(file.game)}&modLoaderType=4&pageSize=50`, cfHeaders);
+      requireThat(available.data?.some(entry => entry.modId === FABRIC_API_CURSEFORGE && entry.gameVersions?.includes(file.game)
         && entry.gameVersions?.includes('Fabric') && entry.isAvailable && entry.releaseType === 1), `No available Fabric API CurseForge dependency for ${file.game}`);
     }
   }
-  const mrVersions = await json(`https://api.modrinth.com/v2/project/${MODRINTH_PROJECT}/version`, mrHeaders);
+  const mrVersions = publishMr ? await json(`https://api.modrinth.com/v2/project/${MODRINTH_PROJECT}/version`, mrHeaders) : [];
   const cfFiles = [];
-  for (let index = 0; ; index += 50) {
+  if (publishCf) for (let index = 0; ; index += 50) {
     const response = await json(`https://api.curseforge.com/v1/mods/${CURSEFORGE_PROJECT}/files?pageSize=50&index=${index}`, cfHeaders);
     requireThat(Array.isArray(response.data) && response.pagination?.index === index, 'Invalid CurseForge file pagination');
     cfFiles.push(...response.data);
@@ -174,7 +248,7 @@ export async function main() {
     let cf = findDuplicate(cfFiles, entry => entry.fileName === file.filename || entry.displayName === displayName(version, file)
       || ((entry.displayName === version || entry.displayName?.startsWith(version + ' · ')) || entry.fileName?.endsWith(`-${version}.jar`))
         && entry.gameVersions?.includes(file.game) && entry.gameVersions?.includes(loaderNames[file.loader]), entry => verifyCurseForge(entry, version, file));
-    for (const platform of ['modrinth', 'curseforge']) {
+    for (const platform of platforms) {
       let match = platform === 'modrinth' ? mr : cf;
       const prior = priorReceipt(platform, file);
       if (!match && prior?.remote_id) {
@@ -187,12 +261,14 @@ export async function main() {
       if (match) existing[platform].set(file.filename, match);
     }
   }
-  writeJson(receipts, 'preflight.json', {repository: REPOSITORY, source_sha: sourceSha, ci_run_id: ciRunId, version,
-    destinations: {modrinth: {id: mrProject.id, slug: mrProject.slug, organization: organization.slug},
-      curseforge: {id: cfResponse.data.id, slug: cfResponse.data.slug, authors: cfResponse.data.authors.map(author => author.name)}},
+  writeJson(receipts, 'preflight.json', {repository: REPOSITORY, source_sha: sourceSha, ci_run_id: ciRunId, version, controller_sha: controllerSha,
+    platforms,
+    destinations: {
+      ...(publishMr ? {modrinth: {id: mrProject.id, slug: mrProject.slug, organization: organization.slug}} : {}),
+      ...(publishCf ? {curseforge: {id: cfResponse.data.id, slug: cfResponse.data.slug, authors: cfResponse.data.authors.map(author => author.name)}} : {})},
     files: files.map(file => ({filename: file.filename, hashes: file.hashes, curseforge_tag_ids: tagIds.get(file.filename),
       existing_modrinth_id: existing.modrinth.get(file.filename)?.id, existing_curseforge_id: existing.curseforge.get(file.filename)?.id}))});
-  console.log(`Preflight passed for ${files.length} exact CI artifacts, both verified destination projects, all game/loader tags and duplicate versions.`);
+  console.log(`Preflight passed for ${files.length} exact CI artifacts on ${platforms.join(', ')}, verified destination projects, all game/loader tags and duplicate versions.`);
   if (process.env.PREFLIGHT_ONLY === 'true') return;
   const deadline = Date.now() + 45 * 60 * 1000;
   async function verifyPublic(platform, file, id, original) {
@@ -228,7 +304,7 @@ export async function main() {
       }
     }
   }
-  for (const platform of ['modrinth', 'curseforge']) {
+  for (const platform of platforms) {
     for (const file of files) {
       const previous = existing[platform].get(file.filename);
       if (previous) { await verifyPublic(platform, file, previous.id, priorReceipt(platform, file)?.upload); continue; }
@@ -246,27 +322,41 @@ export async function main() {
         form.append('file', new Blob([fs.readFileSync(path.join(directory, file.filename))]), file.filename);
       }
       save(platform, file, {state: 'attempting', remote_id: null});
-      const response = await fetch(platform === 'modrinth' ? 'https://api.modrinth.com/v2/version'
-        : `https://minecraft.curseforge.com/api/projects/${CURSEFORGE_PROJECT}/upload-file`, {
-        method: 'POST', headers: platform === 'modrinth' ? mrHeaders : uploadHeaders, body: form,
-        signal: AbortSignal.timeout(120000), redirect: 'error',
-      });
+      let response;
+      try {
+        response = await fetch(platform === 'modrinth' ? 'https://api.modrinth.com/v2/version'
+          : `https://minecraft.curseforge.com/api/projects/${CURSEFORGE_PROJECT}/upload-file`, {
+          method: 'POST', headers: platform === 'modrinth' ? mrHeaders : uploadHeaders, body: form,
+          signal: AbortSignal.timeout(120000), redirect: 'error',
+        });
+      } catch {
+        save(platform, file, {state: 'uncertain', remote_id: null, reason: 'Upload request ended without a response'});
+        throw new Error(`${platform} upload outcome is uncertain; reconcile the saved receipt before retrying.`);
+      }
       if (!response.ok) {
         // A returned rejection is bounded and recorded. Never retry this POST automatically.
         save(platform, file, {state: isDefiniteUploadRejection(response.status) ? 'rejected' : 'uncertain', http_status: response.status, remote_id: null});
         throw new Error(`${platform} upload returned HTTP ${response.status}; inspect saved receipt before retrying.`);
       }
-      const upload = await response.json();
-      const id = upload.id ?? upload.data?.id;
-      save(platform, file, {state: 'accepted', remote_id: id ?? null, upload});
-      requireThat(id, `${platform} accepted upload without a returned ID; inspect receipt before retrying.`);
+      let upload;
+      try { upload = await response.json(); }
+      catch {
+        save(platform, file, {state: 'uncertain', remote_id: null, http_status: response.status, reason: 'Accepted response was not readable JSON'});
+        throw new Error(`${platform} accepted upload without a readable receipt; reconcile before retrying.`);
+      }
+      const id = upload?.id ?? upload?.data?.id;
+      if (!(platform === 'curseforge' ? Number.isSafeInteger(id) && id > 0 : typeof id === 'string' && /^[A-Za-z0-9]+$/.test(id))) {
+        save(platform, file, {state: 'uncertain', remote_id: null, http_status: response.status, reason: 'Accepted response lacked a valid immutable ID'});
+        throw new Error(`${platform} accepted upload without a valid returned ID; reconcile before retrying.`);
+      }
+      save(platform, file, {state: 'accepted', remote_id: id, upload});
       console.log(`${platform} upload accepted: ${id} ${file.filename}`);
       await verifyPublic(platform, file, id, upload);
     }
   }
   writeJson(receipts, 'publication-complete.json', {repository: REPOSITORY, source_sha: sourceSha, ci_run_id: ciRunId,
-    version, completed_at: new Date().toISOString(), verified_uploads: files.length * 2});
-  console.log(`All ${files.length * 2} public uploads verified against the exact CI artifact hashes.`);
+    version, controller_sha: controllerSha, platforms, completed_at: new Date().toISOString(), verified_uploads: files.length * platforms.length});
+  console.log(`All ${files.length * platforms.length} selected-platform public uploads verified against the exact CI artifact hashes.`);
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main().catch(error => {
   console.error(error.message); process.exitCode = 1;
