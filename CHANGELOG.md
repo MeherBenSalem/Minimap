@@ -1,7 +1,6 @@
 # Remnants Minimap v2.0.0
 
-**Release Date:** TBD
-**Supported MC Versions:** 26.2 (NeoForge/Fabric)
+**Supported MC Versions:** 26.2, 26.1.2 (NeoForge/Fabric)
 
 ---
 
@@ -28,7 +27,7 @@ rebuilt from scratch around an Elden Ring style map.
 
 - Uses the official Fabric and NeoForge HUD, key mapping, chunk and level-render hooks; the only mixin left is a
   GUI accessor.
-- Only Minecraft 26.2 is supported in this release. Older Odyssey Map versions remain in the git history.
+- Minecraft 26.2 and 26.1.2 are supported in this release. Older Odyssey Map versions remain in the git history.
 
 ### Upgrade Notes
 

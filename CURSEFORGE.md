@@ -1,5 +1,7 @@
 # Remnants Minimap
 
+![Remnants Minimap](https://raw.githubusercontent.com/MeherBenSalem/Minimap/main/docs/icon.png)
+
 ### *Chart the Lands Between... in Minecraft.*
 
 **Remnants Minimap** turns your world into a hand-drawn chart in the spirit of the Elden Ring map.
@@ -106,7 +108,7 @@ All keys can be rebound in Controls.
 ## Details
 
 - **Loaders:** Fabric (requires Fabric API) and NeoForge
-- **Minecraft:** 26.2
+- **Minecraft:** 26.2 and 26.1.2
 - **Side:** client only
 - **Saved data:** your maps and markers are stored per world and per server in `remnantminimaps/` in your game folder, and settings in `config/remnantminimaps.json`.
 - **Performance:** terrain is read within a small time budget each tick, saved in the background, and drawn from mipmapped textures, so the map stays smooth at every zoom level.

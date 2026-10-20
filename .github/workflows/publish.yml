@@ -1,0 +1,115 @@
+name: Publish
+
+# Builds every version root and loader, then uploads the jars to Modrinth and CurseForge.
+# Runs on a version tag (v2.0.0) or by hand from the Actions tab.
+# Needs the repository secrets MODRINTH_TOKEN and CURSEFORGE_TOKEN.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: Where to publish
+        type: choice
+        options: [both, modrinth, curseforge]
+        default: both
+      dry_run:
+        description: Build and show what would be uploaded, without uploading
+        type: boolean
+        default: false
+      sync_project:
+        description: Also update the Modrinth project page (description from CURSEFORGE.md and icon)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ matrix.game }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: true
+      matrix:
+        game: ['26.2', '26.1.2']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Check version
+        run: |
+          file_version="$(tr -d '[:space:]' < VERSION)"
+          root_version="$(grep '^version=' '${{ matrix.game }}/gradle.properties' | cut -d= -f2 | tr -d '[:space:]')"
+          if [ "$file_version" != "$root_version" ]; then
+            echo "::error::VERSION ($file_version) and ${{ matrix.game }}/gradle.properties ($root_version) differ"; exit 1
+          fi
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME#v}" != "$file_version" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match VERSION $file_version"; exit 1
+          fi
+
+      - name: Build Fabric and NeoForge
+        working-directory: ${{ matrix.game }}
+        run: bash ./gradlew build --no-daemon --stacktrace
+
+      - name: Collect jars
+        run: |
+          mkdir -p all-jars
+          for loader in fabric neoforge; do
+            find "${{ matrix.game }}/$loader/build/libs" -maxdepth 1 -name 'remnantminimaps-*.jar' \
+              ! -name '*-sources.jar' ! -name '*-javadoc.jar' -exec cp {} all-jars/ \;
+          done
+          ls -l all-jars
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jars-${{ matrix.game }}
+          path: all-jars/*.jar
+          if-no-files-found: error
+
+  publish:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: jars-*
+          path: all-jars
+          merge-multiple: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Upload
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          PLATFORMS: ${{ inputs.platforms || 'both' }}
+          DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+          SYNC_PROJECT: ${{ (github.event_name == 'push' || inputs.sync_project) && 'true' || 'false' }}
+        run: |
+          version="$(tr -d '[:space:]' < VERSION)"
+          args=(--version "$version")
+          [ "$PLATFORMS" = "modrinth" ] && args+=(--modrinth-only)
+          [ "$PLATFORMS" = "curseforge" ] && args+=(--curseforge-only)
+          [ "$DRY_RUN" = "true" ] && args+=(--dry-run)
+          [ "$SYNC_PROJECT" = "true" ] && args+=(--sync-project)
+          ls -l all-jars
+          node scripts/upload_platforms.mjs "${args[@]}"
