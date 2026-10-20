@@ -1,4 +1,42 @@
-﻿# Odyssey Map v1.3.0
+# Remnants Minimap v2.0.0
+
+**Release Date:** TBD
+**Supported MC Versions:** 26.2 (NeoForge/Fabric)
+
+---
+
+Odyssey Map is now **Remnants Minimap** (mod id `remnantminimaps`, package `io.nightbeam.remnantminimaps`),
+rebuilt from scratch around an Elden Ring style map.
+
+## New
+
+- Parchment cartography: muted palette, relief shading, contour lines, engraved water, ink coastlines,
+  building footprints and roads. Classic and vivid palettes available.
+- Explored terrain is saved per world and dimension and fades into fog at its edges.
+- Round gilded minimap (or square chart) with smooth sub-pixel rotation and scrolling, animated zoom,
+  cardinal letters, time of day, coordinates and optional biome.
+- Full-screen world map with inertia panning, zoom toward the cursor, overview tiles for far zoom levels,
+  compass rose, day-cycle dial, scale bar, control hints and cloud corners.
+- Beacons (left click on the world map), marker menu (right click), Sites of Grace and 30 marker emblems.
+- Grace and marker list with search and category filters.
+- Pillars of light in the world for beacons, graces and bloodstains, pulled to the horizon when far away.
+- Automatic bloodstain markers on death and a resting-place marker at your last bed.
+- Radar for players and, optionally, hostile and passive mobs.
+- New settings screen; also reachable from the NeoForge mod list.
+
+## Changed
+
+- Uses the official Fabric and NeoForge HUD, key mapping, chunk and level-render hooks; the only mixin left is a
+  GUI accessor.
+- Only Minecraft 26.2 is supported in this release. Older Odyssey Map versions remain in the git history.
+
+### Upgrade Notes
+
+1. Remove `odysseymap-*.jar` and install the matching `remnantminimaps-*.jar`.
+2. Settings and waypoints from Odyssey Map are not migrated; the map is rebuilt as you explore.
+
+---
+# Odyssey Map v1.3.0
 
 **Release Date:** September 3, 2026  
 **Supported MC Versions:** 1.20.1 (Forge/Fabric), 1.21.1 (NeoForge/Fabric), 26.1.2 (NeoForge/Fabric), 26.2 (NeoForge/Fabric)

@@ -6,13 +6,13 @@
     "description": "${description}",
     "authors": ["${mod_author}"],
     "license": "${license}",
+    "icon": "assets/${mod_id}/icon.png",
     "environment": "client",
     "entrypoints": {
-        "client": ["dev.nightbeam.odysseymap.OdysseyMapFabric"]
+        "client": ["io.nightbeam.remnantminimaps.RemnantMinimapsFabric"]
     },
     "mixins": [
-        "${mod_id}.mixins.json",
-        "${mod_id}.fabric.mixins.json"
+        "${mod_id}.mixins.json"
     ],
     "depends": {
         "fabricloader": ">=${fabric_loader_version}",

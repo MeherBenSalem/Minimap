@@ -1,5 +1,5 @@
 /**
- * Upload Odyssey Map jars from all-jars/ to Modrinth + CurseForge.
+ * Upload Remnants Minimap jars from all-jars/ to Modrinth + CurseForge.
  */
 import fs from "fs";
 import path from "path";
@@ -10,7 +10,7 @@ const ROOT = path.join(__dirname, "..");
 
 const MODRINTH_ID = "lLviL6Oq";
 const CURSEFORGE_ID = "1564458";
-const MOD_TITLE = "Odyssey Map";
+const MOD_TITLE = "Remnants Minimap";
 const JAR_DIR = path.join(ROOT, "all-jars");
 const RELEASE_STATE_PATH = path.join(ROOT, ".release-upload-state.json");
 
@@ -52,7 +52,7 @@ function parseArgs(argv) {
 
 function parseJar(jar) {
   const name = path.basename(jar);
-  const m = name.match(/^odysseymap-(fabric|forge|neoforge)-(.+)-(\d+\.\d+\.\d+)\.jar$/i);
+  const m = name.match(/^remnantminimaps-(fabric|forge|neoforge)-(.+)-(\d+\.\d+\.\d+)\.jar$/i);
   if (!m) throw new Error(`Cannot parse jar name: ${name}`);
   return { jar, name, loader: m[1].toLowerCase(), game: m[2], version: m[3] };
 }
@@ -61,7 +61,7 @@ function collectJars(version) {
   if (!fs.existsSync(JAR_DIR)) throw new Error(`Missing ${JAR_DIR}; run buildAll first`);
   return fs
     .readdirSync(JAR_DIR)
-    .filter((n) => n.startsWith("odysseymap-") && n.endsWith(`-${version}.jar`))
+    .filter((n) => n.startsWith("remnantminimaps-") && n.endsWith(`-${version}.jar`))
     .map((n) => path.join(JAR_DIR, n))
     .sort();
 }
@@ -213,7 +213,7 @@ async function main() {
   const changelog = readChangelog(version, args.changelogFile);
   const state = loadReleaseState();
   const jars = collectJars(version);
-  if (!jars.length) throw new Error(`No odysseymap jars for version ${version} in all-jars/`);
+  if (!jars.length) throw new Error(`No remnantminimaps jars for version ${version} in all-jars/`);
   const parsed = jars.map(parseJar);
 
   const { MODRINTH_TOKEN, CURSEFORGE_TOKEN, CURSEFORGE_API_KEY } = process.env;

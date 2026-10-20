@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for contributing to Odyssey Map.
+Thanks for contributing to Remnants Minimap.
 
 ## Before you start
 
@@ -12,13 +12,14 @@ Thanks for contributing to Odyssey Map.
 
 1. Fork the repository and create a branch from `main`.
 2. Make the smallest coherent change that solves the problem.
-3. Build the version root you changed from inside that folder, for example `1.20.1/` or `26.2/`.
+3. Build the version root you changed from inside that folder, for example `26.2/`.
 4. Update documentation when behavior, configuration, or release steps change.
 5. Open a pull request with a clear summary, verification notes, and any compatibility risks.
 
 ## Coding expectations
 
 - Follow the existing patterns in the targeted version root. The version folders are intentionally isolated.
+- Keep `core/` packages free of Minecraft classes so they can be copied into future version roots unchanged.
 - Do not port changes across versions with shared sources or symlinks.
 - Avoid committing generated jars, logs, run directories, secrets, or local IDE files.
 
