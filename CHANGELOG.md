@@ -1,6 +1,6 @@
 # Remnants Minimap v2.0.0
 
-**Supported MC Versions:** 26.2, 26.1.2 (NeoForge/Fabric)
+**Supported MC Versions:** 26.2, 26.1.2, 1.21.1 (NeoForge/Fabric), 1.20.1 (Forge/Fabric)
 
 ---
 
@@ -21,13 +21,13 @@ rebuilt from scratch around an Elden Ring style map.
 - Pillars of light in the world for beacons, graces and bloodstains, pulled to the horizon when far away.
 - Automatic bloodstain markers on death and a resting-place marker at your last bed.
 - Radar for players and, optionally, hostile and passive mobs.
-- New settings screen; also reachable from the NeoForge mod list.
+- New settings screen; also reachable from the NeoForge and Forge mod lists.
 
 ## Changed
 
-- Uses the official Fabric and NeoForge HUD, key mapping, chunk and level-render hooks; the only mixin left is a
-  GUI accessor.
-- Minecraft 26.2 and 26.1.2 are supported in this release. Older Odyssey Map versions remain in the git history.
+- Uses the official Fabric, NeoForge and Forge HUD, key mapping, chunk and level-render hooks; the only mixins left
+  are a GUI accessor on 26.x and a HUD hook below the chat on Fabric 1.21.1 and 1.20.1.
+- Minecraft 26.2, 26.1.2, 1.21.1 and 1.20.1 are supported in this release, with the same features and data formats.
 
 ### Upgrade Notes
 

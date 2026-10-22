@@ -52,21 +52,26 @@ void configureWorkspaceClean(String taskName, String rootDirName, String descrip
     }
 }
 
+configureWorkspaceBuild('build1201', '1.20.1', 'Build all 1.20.1 loaders (Fabric + Forge).')
+configureWorkspaceBuild('build1211', '1.21.1', 'Build all 1.21.1 loaders (Fabric + NeoForge).')
 configureWorkspaceBuild('build2612', '26.1.2', 'Build all 26.1.2 loaders (Fabric + NeoForge).')
 configureWorkspaceBuild('build262', '26.2', 'Build all 26.2 loaders (Fabric + NeoForge).')
 
+configureWorkspaceClean('clean1201', '1.20.1', 'Clean all 1.20.1 loaders.')
+configureWorkspaceClean('clean1211', '1.21.1', 'Clean all 1.21.1 loaders.')
 configureWorkspaceClean('clean2612', '26.1.2', 'Clean all 26.1.2 loaders.')
 configureWorkspaceClean('clean262', '26.2', 'Clean all 26.2 loaders.')
 
 tasks.register('dist') {
     group = 'build'
     description = 'Build ALL versions and copy every mod JAR into all-jars/.'
-    dependsOn 'build2612', 'build262'
+    dependsOn 'build1201', 'build1211', 'build2612', 'build262'
     notCompatibleWithConfigurationCache('Copies workspace JARs with dynamic file trees.')
     doLast {
         def outDir = project.layout.projectDirectory.dir('all-jars').asFile
         outDir.mkdirs()
-        def dirs = ['26.1.2/fabric', '26.1.2/neoforge', '26.2/fabric', '26.2/neoforge']
+        def dirs = ['1.20.1/fabric', '1.20.1/forge', '1.21.1/fabric', '1.21.1/neoforge',
+                    '26.1.2/fabric', '26.1.2/neoforge', '26.2/fabric', '26.2/neoforge']
         dirs.each { modDir ->
             def libsDir = project.file("${modDir}/build/libs")
             if (libsDir.exists()) {
@@ -94,7 +99,7 @@ tasks.register('buildAll') {
 tasks.register('cleanAll') {
     group = 'build'
     description = 'Clean ALL versions and all-jars/.'
-    dependsOn 'clean2612', 'clean262'
+    dependsOn 'clean1201', 'clean1211', 'clean2612', 'clean262'
     doLast {
         def outDir = file('all-jars')
         if (outDir.exists()) {
@@ -119,7 +124,7 @@ tasks.register('syncVersion') {
             throw new GradleException('Pass -PmodVersion=x.y.z or add a VERSION file at repo root.')
         }
         file('VERSION').text = v + System.lineSeparator()
-        ['26.1.2', '26.2'].each { dir ->
+        ['1.20.1', '1.21.1', '26.1.2', '26.2'].each { dir ->
             def props = file("${dir}/gradle.properties")
             if (!props.exists()) {
                 throw new GradleException("Missing ${props}")
