@@ -1,0 +1,1 @@
+A soulslike minimap and world map: parchment cartography with ink contours and engraved seas, a gilded rotating minimap, Sites of Grace, 30 marker emblems and pillars of light that guide you home. Client-side only.
