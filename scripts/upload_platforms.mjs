@@ -4,6 +4,9 @@
  *   node scripts/upload_platforms.mjs --version 2.0.0 [--modrinth-only | --curseforge-only]
  *                                     [--dry-run] [--sync-project] [--changelog-file FILE]
  *
+ * Jars are named remnantminimaps-<loader>-<minecraft>-<version>.jar; each one is published for exactly
+ * that loader and Minecraft version (see SUPPORTED below for the version roots of this repository).
+ *
  * Environment: MODRINTH_TOKEN, CURSEFORGE_TOKEN (only the ones for the selected platforms).
  * Optional: MODRINTH_PROJECT_ID, CURSEFORGE_PROJECT_ID to override the project ids below.
  * Locally, secrets can also live in secrets/local.env (KEY=value lines, never committed).
@@ -25,6 +28,14 @@ const RELEASE_STATE_PATH = path.join(ROOT, ".release-upload-state.json");
 
 const MODRINTH_FABRIC_API = "P7dR8mSH";
 const CURSEFORGE_LOADER_IDS = { fabric: 7499, forge: 7498, neoforge: 10150 };
+
+/** Minecraft version of each version root and the loaders it builds. */
+const SUPPORTED = {
+  "26.2": ["fabric", "neoforge"],
+  "26.1.2": ["fabric", "neoforge"],
+  "1.21.1": ["fabric", "neoforge"],
+  "1.20.1": ["fabric", "forge"],
+};
 
 function loadLocalEnv() {
   const envPath = path.join(ROOT, "secrets", "local.env");
@@ -57,7 +68,12 @@ function parseJar(jar) {
   const name = path.basename(jar);
   const m = name.match(/^remnantminimaps-(fabric|forge|neoforge)-(.+)-(\d+\.\d+\.\d+)\.jar$/i);
   if (!m) throw new Error(`Cannot parse jar name: ${name}`);
-  return { jar, name, loader: m[1].toLowerCase(), game: m[2], version: m[3] };
+  const loader = m[1].toLowerCase();
+  const game = m[2];
+  if (!SUPPORTED[game]?.includes(loader)) {
+    throw new Error(`${name}: ${loader} on Minecraft ${game} is not a version root of this repository`);
+  }
+  return { jar, name, loader, game, version: m[3] };
 }
 
 function collectJars(version) {
@@ -200,6 +216,17 @@ async function uploadToCurseForge(jars, version, changelog, token, dryRun, state
   const all = Array.isArray(payload) ? payload : payload?.data || [];
   const clientId = all.find((v) => v.name === "Client")?.id;
   if (!clientId) throw new Error("CurseForge 'Client' environment id missing");
+  // Prefer entries of the "Minecraft x.y" version types, should another type reuse the same name.
+  let minecraftTypes = new Set();
+  const typesRes = await fetch("https://minecraft.curseforge.com/api/game/version-types", { headers: { "X-Api-Token": token } });
+  if (typesRes.ok) {
+    const types = await typesRes.json();
+    minecraftTypes = new Set((Array.isArray(types) ? types : []).filter((t) => /^Minecraft\b/i.test(t.name)).map((t) => t.id));
+  }
+  const gameVersion = (name) => {
+    const matches = all.filter((v) => v.name === name);
+    return matches.find((v) => minecraftTypes.has(v.gameVersionTypeID)) || matches[0];
+  };
 
   for (const jar of jars) {
     if (hasRecordedUpload(state, "curseforge", version, jar)) {
@@ -207,7 +234,7 @@ async function uploadToCurseForge(jars, version, changelog, token, dryRun, state
       continue;
     }
     const loaderId = CURSEFORGE_LOADER_IDS[jar.loader];
-    const game = all.find((v) => v.name === jar.game);
+    const game = gameVersion(jar.game);
     if (!loaderId) throw new Error(`Unknown loader ${jar.loader}`);
     if (!game) throw new Error(`No CurseForge game version named ${jar.game}`);
     const metadata = {
