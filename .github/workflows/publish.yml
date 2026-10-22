@@ -23,6 +23,10 @@ on:
         description: Also update the Modrinth project page (description from CURSEFORGE.md and icon)
         type: boolean
         default: true
+      games:
+        description: Only publish these Minecraft versions (comma-separated, e.g. 1.21.1,1.20.1); empty publishes all
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -109,9 +113,11 @@ jobs:
           PLATFORMS: ${{ inputs.platforms || 'both' }}
           DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
           SYNC_PROJECT: ${{ (github.event_name == 'push' || inputs.sync_project) && 'true' || 'false' }}
+          GAMES: ${{ inputs.games || '' }}
         run: |
           version="$(tr -d '[:space:]' < VERSION)"
           args=(--version "$version")
+          [ -n "$GAMES" ] && args+=(--games "$GAMES")
           [ "$PLATFORMS" = "modrinth" ] && args+=(--modrinth-only)
           [ "$PLATFORMS" = "curseforge" ] && args+=(--curseforge-only)
           [ "$DRY_RUN" = "true" ] && args+=(--dry-run)

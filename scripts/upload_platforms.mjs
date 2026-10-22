@@ -3,6 +3,7 @@
  *
  *   node scripts/upload_platforms.mjs --version 2.0.0 [--modrinth-only | --curseforge-only]
  *                                     [--dry-run] [--sync-project] [--changelog-file FILE]
+ *                                     [--games 1.21.1,1.20.1]
  *
  * Jars are named remnantminimaps-<loader>-<minecraft>-<version>.jar; each one is published for exactly
  * that loader and Minecraft version (see SUPPORTED below for the version roots of this repository).
@@ -57,10 +58,15 @@ function parseArgs(argv) {
     else if (a === "--modrinth-only") out.modrinthOnly = true;
     else if (a === "--dry-run") out.dryRun = true;
     else if (a === "--sync-project") out.syncProject = true;
+    else if (a === "--games") out.games = (argv[++i] || "").split(/[\s,]+/).filter(Boolean);
     else throw new Error(`Unknown arg ${a}`);
   }
   if (!out.version) throw new Error("--version required");
   out.version = out.version.replace(/^v/, "");
+  if (out.games && !out.games.length) throw new Error("--games needs at least one Minecraft version");
+  for (const game of out.games || []) {
+    if (!SUPPORTED[game]) throw new Error(`--games: ${game} is not a version root of this repository`);
+  }
   return out;
 }
 
@@ -283,8 +289,13 @@ async function uploadToCurseForge(jars, version, changelog, token, dryRun, state
 async function main() {
   loadLocalEnv();
   const args = parseArgs(process.argv);
-  const jars = collectJars(args.version).map(parseJar);
+  // --games publishes only those Minecraft versions, e.g. roots added to an already released version.
+  const jars = collectJars(args.version).map(parseJar).filter((j) => !args.games || args.games.includes(j.game));
   if (!jars.length) throw new Error(`No remnantminimaps jars for version ${args.version} in all-jars/`);
+  for (const game of args.games || []) {
+    const missing = SUPPORTED[game].filter((loader) => !jars.some((j) => j.game === game && j.loader === loader));
+    if (missing.length) throw new Error(`--games: no ${missing.join(", ")} jar for Minecraft ${game}`);
+  }
   const changelog = readChangelog(args.version, args.changelogFile);
   const state = loadReleaseState();
   const doModrinth = !args.curseforgeOnly;
