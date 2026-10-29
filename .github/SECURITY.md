@@ -6,7 +6,11 @@ The project is maintained across these version roots:
 
 | Version root | Minecraft line | Loaders |
 | --- | --- | --- |
+| `26.3/` | 26.3 | Fabric, NeoForge |
 | `26.2/` | 26.2 | Fabric, NeoForge |
+| `26.1.2/` | 26.1.2 | Fabric, NeoForge |
+| `1.21.1/` | 1.21.1 | Fabric, NeoForge |
+| `1.20.1/` | 1.20.1 | Fabric, Forge |
 
 Security fixes may be applied selectively depending on the impact and the cost
 of porting them across isolated version roots.

@@ -107,8 +107,8 @@ All keys can be rebound in Controls.
 
 ## Details
 
-- **Loaders:** Fabric (requires Fabric API) and NeoForge
-- **Minecraft:** 26.2 and 26.1.2
+- **Loaders:** Fabric (requires Fabric API) and NeoForge; Fabric and Forge on 1.20.1
+- **Minecraft:** 26.3, 26.2, 26.1.2, 1.21.1 and 1.20.1
 - **Side:** client only
 - **Saved data:** your maps and markers are stored per world and per server in `remnantminimaps/` in your game folder, and settings in `config/remnantminimaps.json`.
 - **Performance:** terrain is read within a small time budget each tick, saved in the background, and drawn from mipmapped textures, so the map stays smooth at every zoom level.

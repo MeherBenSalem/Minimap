@@ -6,7 +6,8 @@ engraved water) inside a gold ring, with the gold player arrow over a Site of Gr
 Usage: python tools/generate_icon.py
 Writes:
   docs/icon.png                                                   512x512 (Modrinth / CurseForge logo)
-  26.2/common/src/main/resources/assets/remnantminimaps/icon.png    256x256 (in-mod logo)
+  26.3/common/src/main/resources/assets/remnantminimaps/icon.png    256x256 (in-mod logo)
+  26.2/common/src/main/resources/assets/remnantminimaps/icon.png    256x256
   26.1.2/common/src/main/resources/assets/remnantminimaps/icon.png  256x256
 """
 from __future__ import annotations
@@ -214,7 +215,7 @@ def main():
     out.parent.mkdir(parents=True, exist_ok=True)
     icon.save(out)
     small = icon.resize((256, 256), Image.LANCZOS)
-    for version in ("26.2", "26.1.2"):
+    for version in ("26.3", "26.2", "26.1.2"):
         p = ROOT / version / "common/src/main/resources/assets/remnantminimaps/icon.png"
         if p.parent.exists():
             small.save(p)

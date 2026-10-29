@@ -32,6 +32,7 @@ const CURSEFORGE_LOADER_IDS = { fabric: 7499, forge: 7498, neoforge: 10150 };
 
 /** Minecraft version of each version root and the loaders it builds. */
 const SUPPORTED = {
+  "26.3": ["fabric", "neoforge"],
   "26.2": ["fabric", "neoforge"],
   "26.1.2": ["fabric", "neoforge"],
   "1.21.1": ["fabric", "neoforge"],

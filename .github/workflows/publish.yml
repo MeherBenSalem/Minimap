@@ -44,6 +44,7 @@ jobs:
       fail-fast: true
       matrix:
         include:
+          - { game: '26.3', java: '25', loaders: 'fabric neoforge' }
           - { game: '26.2', java: '25', loaders: 'fabric neoforge' }
           - { game: '26.1.2', java: '25', loaders: 'fabric neoforge' }
           - { game: '1.21.1', java: '21', loaders: 'fabric neoforge' }
