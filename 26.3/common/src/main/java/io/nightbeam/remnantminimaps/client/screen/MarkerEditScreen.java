@@ -1,5 +1,6 @@
 package io.nightbeam.remnantminimaps.client.screen;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.nightbeam.remnantminimaps.client.RemnantClient;
 import io.nightbeam.remnantminimaps.client.render.MarkerPainter;
 import io.nightbeam.remnantminimaps.client.render.gfx.Art;
@@ -174,7 +175,7 @@ public class MarkerEditScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (event.button() == 0) {
+        if (event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             int x = left + 16;
             double mx = event.x();
             double my = event.y();

@@ -1,5 +1,6 @@
 package io.nightbeam.remnantminimaps.client.ui.widget;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import io.nightbeam.remnantminimaps.client.ui.Ui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -42,12 +43,12 @@ public class ROption extends AbstractButton {
 
     @Override
     protected boolean isValidClickButton(MouseButtonInfo info) {
-        return info.button() == 0 || info.button() == 1;
+        return info.button() == InputConstants.MOUSE_BUTTON_LEFT || info.button() == InputConstants.MOUSE_BUTTON_RIGHT;
     }
 
     @Override
     public void onClick(MouseButtonEvent event, boolean doubleClick) {
-        if (event.button() == 1) {
+        if (event.button() == InputConstants.MOUSE_BUTTON_RIGHT) {
             step.accept(-1);
             return;
         }

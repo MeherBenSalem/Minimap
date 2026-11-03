@@ -686,7 +686,7 @@ public class WorldMapScreen extends Screen {
             }
         }
         if (hoveredRow != null) {
-            if (button == 1) {
+            if (button == InputConstants.MOUSE_BUTTON_RIGHT) {
                 openMenu(mx, my, hoveredRow);
             } else if (doubleClick) {
                 minecraft.gui.setScreen(new MarkerEditScreen(this, hoveredRow, false));
@@ -824,11 +824,11 @@ public class WorldMapScreen extends Screen {
         if (my < TOP_H || my > height - BOTTOM_H) {
             return true;
         }
-        if (event.button() == 1) {
+        if (event.button() == InputConstants.MOUSE_BUTTON_RIGHT) {
             openMenu(mx, my, hovered);
             return true;
         }
-        if (event.button() == 0) {
+        if (event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             pressing = true;
             dragging = false;
             pressDouble = doubleClick;
@@ -845,7 +845,7 @@ public class WorldMapScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
-        if (pressing && event.button() == 0) {
+        if (pressing && event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             if (!dragging && Math.hypot(event.x() - pressX, event.y() - pressY) > 3) {
                 dragging = true;
             }
@@ -868,7 +868,7 @@ public class WorldMapScreen extends Screen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
-        if (pressing && event.button() == 0) {
+        if (pressing && event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             pressing = false;
             if (dragging) {
                 dragging = false;

@@ -1,3 +1,21 @@
+# Remnants Minimap v2.0.1
+
+**Supported MC Versions:** 26.3 (Fabric/NeoForge). Other versions are unchanged from 2.0.0.
+
+---
+
+## Fixed (Minecraft 26.3)
+
+- Clicking an emblem or a colour in the marker editor now applies it. Hover highlighted them, but clicks were ignored.
+- World map: left click places beacons and drags the map again, and the marker menu opens on right click instead
+  of left click. In the marker list, right click opens a marker's menu again.
+- Settings options cycle forward on left click and backward on right click again.
+
+Minecraft 26.3 numbers mouse buttons from 1 (left 1, middle 2, right 3); the 26.3 port still checked the older
+numbers (left 0, right 1). The 26.3 code now uses Minecraft's own button constants.
+
+---
+
 # Remnants Minimap v2.0.0
 
 **Supported MC Versions:** 26.3, 26.2, 26.1.2, 1.21.1 (NeoForge/Fabric), 1.20.1 (Forge/Fabric)
