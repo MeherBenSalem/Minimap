@@ -1,10 +1,14 @@
 ![Remnants Minimap 2.0](https://raw.githubusercontent.com/MeherBenSalem/Minimap/main/marketing/images/banner.png)
 
+**[Discord](https://discord.gg/TJc3CxR4jK) · [The modpack](https://www.curseforge.com/minecraft/modpacks/remnants-ashen-legacy) · [Support NightBeam](https://nightbeam.dev/support) · [NightBeam Pro](https://nightbeam.dev/memberships) · [All projects](https://nightbeam.dev/projects)**
+
+> **Play it in [Remnants: Ashen Legacy](https://www.curseforge.com/minecraft/modpacks/remnants-ashen-legacy)**, NightBeam's story-driven soulslike RPG modpack. It builds Advanced Minimap & Waypoints into one rule set with the rest of the Remnants series.
+
 ## A soulslike minimap for Minecraft
 
 Remnants Minimap redraws your world as a hand-inked chart: parchment lands, engraved seas and ink contour lines, framed by a gilded ring. Mark your Sites of Grace, drop a beacon, and follow pillars of light back across the land.
 
-**Client-side only.** It works in singleplayer and on any server, and the server needs nothing installed.
+**Client-side.** It works in singleplayer and on any server, and the server needs nothing installed.
 
 **2.0** is available for **Fabric, Forge and NeoForge** on **1.20.1, 1.21.1, 26.1.2, 26.2 and 26.3**.
 
@@ -60,7 +64,7 @@ Press **M** to open the full map.
 - **30 emblems:** Site of Grace, Castle, Church, Ruins, Tower, Village, Cave, Catacombs, Portal, Waygate, Boss, Danger, Battle, Treasure, Mine, Forge, Farm, Merchant, Spring, Great Tree, Summit, Camp, Ship, Banner, Star, Lookout and more.
 - **Make each one yours:** a name, one of ten hues, an exact position, and whether it shows on the minimap, carries a label and raises a pillar of light.
 - Press **B** to place a marker where you stand.
-- Press **G** on the world map for the **Grace list**: every marker in the dimension with its distance, Sites of Grace first, a search box and nine category filters (Graces, Beacons, Bloodstains, Rest & Home, Settlements, Dungeons, Threats, Resources, Landmarks). Click an entry and the map glides to it.
+- Press **G** on the world map for the **Grace list**: every marker in the dimension with its distance, Sites of Grace at the top, a search box and nine category filters (Graces, Beacons, Bloodstains, Rest & Home, Settlements, Dungeons, Threats, Resources, Landmarks). Click an entry and the map glides to it.
 - **A Bloodstain is left where you die** (the last 3 are kept by default, up to 20), and a **Resting Place marks the last bed you slept in**. Both are automatic.
 
 ![Always find your way back](https://raw.githubusercontent.com/MeherBenSalem/Minimap/main/marketing/images/card-pillars.png)
@@ -83,7 +87,7 @@ Open it with **O** on the world map or from the NeoForge mod list. You can also 
 
 ![Light on your game](https://raw.githubusercontent.com/MeherBenSalem/Minimap/main/marketing/images/card-performance.png)
 
-- Terrain is read within a small time budget each tick: newly loaded chunks first, then your surroundings, then a slow sweep over your render distance. The default is 2 ms, adjustable from 0.5 to 8 ms.
+- Terrain is read within a small time budget each tick: newly loaded chunks, then your surroundings, then a slow sweep over your render distance. The default is 2 ms, adjustable from 0.5 to 8 ms.
 - Maps are drawn from mipmapped textures, so they stay smooth at every zoom level.
 - Each 256×256 block region is saved as one compressed file, in the background, on its own thread.
 - Change the palette or any cartography option and your saved map is redrawn. Nothing needs exploring again.
@@ -117,9 +121,9 @@ All keys can be rebound in Controls. *Toggle Minimap Rotation* and *Minimap Sett
 | 26.1.2 · 26.2 · 26.3 | Fabric, NeoForge | Fabric API (Fabric) |
 
 - Download the file whose name matches your loader and Minecraft version, for example `remnantminimaps-fabric-26.3-….jar`.
-- Install it on your **client** only. Servers do not need it.
+- Install it on your **client**. Servers do not need it.
 - Maps and markers are kept per singleplayer world and per server address in `remnantminimaps/` in your game folder. Settings are in `config/remnantminimaps.json`.
-- **Coming from Odyssey Map?** Remnants Minimap is its full rebuild. Remove the old `odysseymap` jar first. Old settings and waypoints are not carried over; the map fills in again as you explore.
+- **Coming from Odyssey Map?** Remnants Minimap is its full rebuild. Remove the old `odysseymap` jar before installing. Old settings and waypoints are not carried over; the map fills in again as you explore.
 
 ![Questions](https://raw.githubusercontent.com/MeherBenSalem/Minimap/main/marketing/images/header-faq.png)
 
@@ -151,3 +155,15 @@ In `remnantminimaps/worlds/<world>/` in your game folder: one `.rmr` file per 25
 ---
 
 Remnants Minimap is licensed under Apache-2.0. It is an independent, fan-made project and is not affiliated with or endorsed by any game or studio it takes inspiration from. All art in the mod is original.
+
+---
+
+### More from NightBeam Studio
+
+- **[Remnants: Ashen Legacy](https://www.curseforge.com/minecraft/modpacks/remnants-ashen-legacy)**: the story-driven soulslike RPG modpack built on NightBeam's mods
+- **[Premium server plugins](https://nightbeam.dev/store)**: anti-cheat, ranked PvP, SMP setups and more on BuiltByBit
+- **[NightBeam Pro](https://nightbeam.dev/memberships)**: the model library and NightBeam Forge credits, from $5 a month
+- **[Discord](https://discord.gg/TJc3CxR4jK)**: support, bug reports, suggestions and early looks
+- **[Support NightBeam](https://nightbeam.dev/support)**: help keep every mod free
+
+**Follow:** [YouTube](https://www.youtube.com/@nightbeamstudio) · [Instagram](https://www.instagram.com/nightbeamstudio/) · [X](https://x.com/NightBeamLLC) · [Facebook](https://www.facebook.com/profile.php?id=61574823331471) · [Source and issues](https://github.com/MeherBenSalem/Minimap)
