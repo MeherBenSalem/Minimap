@@ -1,6 +1,6 @@
 ![Remnants Minimap 2.0](https://raw.githubusercontent.com/MeherBenSalem/Minimap/main/marketing/images/banner.png)
 
-**[Discord](https://discord.gg/TJc3CxR4jK) · [Source and issues](https://github.com/MeherBenSalem/Minimap)**
+**[Docs](https://nightbeam.dev/docs/remnants-minimap) · [Discord](https://discord.gg/TJc3CxR4jK) · [Source and issues](https://github.com/MeherBenSalem/Minimap)**
 
 ## A soulslike minimap for Minecraft
 
