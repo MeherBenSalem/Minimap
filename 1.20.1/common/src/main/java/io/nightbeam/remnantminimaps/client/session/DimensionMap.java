@@ -600,6 +600,17 @@ public final class DimensionMap {
         });
     }
 
+    /** Regions whose styled image lags behind their data; pre-loading waits while there are many. */
+    public int styleBacklog() {
+        int n = 0;
+        for (RegionData r : regions.values()) {
+            if (!r.styleDirty.isEmpty()) {
+                n++;
+            }
+        }
+        return n;
+    }
+
     /** True when a column was explored (used for hover info). */
     public boolean explored(int wx, int wz) {
         return Columns.explored(columnColor(wx, wz));

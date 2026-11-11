@@ -1,5 +1,6 @@
 package io.nightbeam.remnantminimaps;
 
+import io.nightbeam.remnantminimaps.client.command.RemnantCommands;
 import io.nightbeam.remnantminimaps.client.Keys;
 import io.nightbeam.remnantminimaps.client.RemnantClient;
 import io.nightbeam.remnantminimaps.client.screen.SettingsScreen;
@@ -8,6 +9,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraftforge.client.ConfigScreenHandler;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.client.event.RegisterClientCommandsEvent;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
@@ -51,5 +53,7 @@ final class RemnantMinimapsForgeClient {
                         event.getCamera(), event.getPartialTick());
             }
         });
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, RegisterClientCommandsEvent.class,
+                event -> RemnantCommands.register(event.getDispatcher()));
     }
 }

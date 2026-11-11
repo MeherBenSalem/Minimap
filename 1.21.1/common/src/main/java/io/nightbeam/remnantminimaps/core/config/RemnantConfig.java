@@ -75,6 +75,12 @@ public final class RemnantConfig {
     public float scanBudgetMs = 2.0f;
     public int maxLoadedRegions = 128;
 
+    // Pre-loading (single-player): limits for /remnantmap preload
+    /** Largest radius, in blocks, a pre-load may cover. */
+    public int preloadMaxRadius = 1024;
+    /** Saved chunks read per tick while pre-loading. */
+    public int preloadChunksPerTick = 8;
+
     public static final float MIN_MINIMAP_ZOOM = 0.125f;
     public static final float MAX_MINIMAP_ZOOM = 6.0f;
 
@@ -98,6 +104,8 @@ public final class RemnantConfig {
         hillshade = clamp(hillshade, 0.0f, 2.0f);
         scanBudgetMs = clamp(scanBudgetMs, 0.25f, 10.0f);
         maxLoadedRegions = clamp(maxLoadedRegions, 16, 1024);
+        preloadMaxRadius = clamp(preloadMaxRadius, 64, 4096);
+        preloadChunksPerTick = clamp(preloadChunksPerTick, 1, 32);
     }
 
     public static RemnantConfig load(Path file) {

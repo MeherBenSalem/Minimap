@@ -4,10 +4,13 @@ import io.nightbeam.remnantminimaps.core.map.Columns;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.color.block.BlockTintSource;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
@@ -114,12 +117,30 @@ public final class BlockClassifier {
     /** Packed column color for the given surface state. */
     public int classify(BlockState state, ClientLevel level, BlockPos pos) {
         int info = info(state);
+        if ((info >> 8) == TINT_WATER) {
+            return Columns.pack(info & 0xFF, level.getBiome(pos).value().getWaterColor() & 0xFFFFFF);
+        }
+        return classifyTinted(info, state, level, pos);
+    }
+
+    /**
+     * Same for a chunk read from the save: tints are computed from {@code level}'s own biomes and the
+     * water color from {@code biome} (null falls back to the block's map color).
+     */
+    public int classify(BlockState state, BlockAndTintGetter level, Holder<Biome> biome, BlockPos pos) {
+        int info = info(state);
+        if ((info >> 8) == TINT_WATER) {
+            int rgb = biome != null ? biome.value().getWaterColor() : state.getMapColor(level, pos).col;
+            return Columns.pack(info & 0xFF, rgb & 0xFFFFFF);
+        }
+        return classifyTinted(info, state, level, pos);
+    }
+
+    private int classifyTinted(int info, BlockState state, BlockAndTintGetter level, BlockPos pos) {
         int category = info & 0xFF;
         int tint = info >> 8;
         int rgb;
-        if (tint == TINT_WATER) {
-            rgb = level.getBiome(pos).value().getWaterColor();
-        } else if (tint == TINT_SOURCE) {
+        if (tint == TINT_SOURCE) {
             BlockTintSource source = Minecraft.getInstance().getBlockColors().getTintSource(state, 0);
             rgb = source != null ? source.colorInWorld(state, level, pos) : state.getMapColor(level, pos).col;
         } else {

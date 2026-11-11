@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import io.nightbeam.remnantminimaps.client.Keys;
 import io.nightbeam.remnantminimaps.client.RemnantClient;
 import io.nightbeam.remnantminimaps.client.TimeOfDay;
+import io.nightbeam.remnantminimaps.client.preload.MapPreloader;
 import io.nightbeam.remnantminimaps.client.render.MapPainter;
 import io.nightbeam.remnantminimaps.client.render.MapView;
 import io.nightbeam.remnantminimaps.client.render.MarkerPainter;
@@ -461,6 +462,11 @@ public class WorldMapScreen extends Screen {
         g.drawString(font, title, 0, 0, Ui.IVORY, true);
         g.pose().popPose();
         Ui.text(g, font, dimensionName(map.dimensionId), 32, 8 + Math.round(9 * s) + 1, Ui.MUTED);
+        float preload = MapPreloader.progress();
+        if (preload >= 0) {
+            Ui.text(g, font, Component.translatable("remnantminimaps.map.preload_progress", Math.round(preload * 100)),
+                    32, 8 + Math.round(9 * s) + 12, Ui.GOLD);
+        }
     }
 
     private Component dimensionName(String id) {

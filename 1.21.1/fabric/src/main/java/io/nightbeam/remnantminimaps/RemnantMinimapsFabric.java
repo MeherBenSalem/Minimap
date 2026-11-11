@@ -1,8 +1,10 @@
 package io.nightbeam.remnantminimaps;
 
+import io.nightbeam.remnantminimaps.client.command.RemnantCommands;
 import io.nightbeam.remnantminimaps.client.Keys;
 import io.nightbeam.remnantminimaps.client.RemnantClient;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -18,6 +20,7 @@ public class RemnantMinimapsFabric implements ClientModInitializer {
             KeyBindingHelper.registerKeyBinding(key);
         }
         ClientTickEvents.END_CLIENT_TICK.register(RemnantClient::onClientTick);
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, context) -> RemnantCommands.register(dispatcher));
         ClientChunkEvents.CHUNK_LOAD.register(RemnantClient::onChunkLoaded);
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> RemnantClient.onDisconnect());
         // The HUD is drawn from GuiMixin, just below the chat like on the other loaders.

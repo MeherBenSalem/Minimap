@@ -1,5 +1,6 @@
 package io.nightbeam.remnantminimaps;
 
+import io.nightbeam.remnantminimaps.client.command.RemnantCommands;
 import io.nightbeam.remnantminimaps.client.Keys;
 import io.nightbeam.remnantminimaps.client.RemnantClient;
 import io.nightbeam.remnantminimaps.client.screen.SettingsScreen;
@@ -12,6 +13,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
@@ -43,5 +45,6 @@ public class RemnantMinimapsNeoForge {
                         event.getCamera(), event.getPartialTick().getGameTimeDeltaPartialTick(false));
             }
         });
+        NeoForge.EVENT_BUS.addListener(RegisterClientCommandsEvent.class, event -> RemnantCommands.register(event.getDispatcher()));
     }
 }
