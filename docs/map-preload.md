@@ -22,6 +22,8 @@ It is a client command and works in **single-player** (and for the host of a LAN
   version are upgraded in memory the same way the game would; the save itself is not changed.
 - Chunks around you that the game already shows are skipped: the live map keeps those up to date, and the
   save may be a few minutes older than what you see.
+- Chunks the game unloaded only a few seconds ago may not have reached the save yet and are then counted
+  as "not generated yet"; running the command again later picks them up.
 - It works in the dimension you are in. In the Nether it maps the same height slice the live minimap
   shows (around your current height). Leaving the world or changing dimension stops it.
 
@@ -42,8 +44,9 @@ It is a client command and works in **single-player** (and for the host of a LAN
   redrawn, or more than 256 decoded chunks are waiting to be drawn, requests pause.
 - The work goes region by region (256 x 256 blocks), nearest first, so memory stays flat.
 
-With the defaults that is up to 160 chunks per second; a radius of 1024 blocks (about 13,000 chunks) takes
-a minute or two on a typical machine. The integrated server keeps running normally meanwhile.
+With the defaults that is up to 160 chunks per second, so a radius of 1024 blocks (about 13,000 chunks to
+look at) takes about 80 seconds; in testing, a radius of 900 blocks (10,189 chunks) took 62 seconds. The
+integrated server keeps running normally meanwhile.
 
 ## Why not on servers?
 
