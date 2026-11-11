@@ -8,7 +8,7 @@
 The land is drawn on aged parchment with ink contour lines and engraved seas, framed by a gilded ring,
 and Sites of Grace glow gold across the map.
 
-Client-side only. It works on any server, singleplayer or multiplayer.
+Client-side. It works on any server, singleplayer or multiplayer. Install it on a server too only if operators should be able to teleport from the map.
 
 ![The round minimap and a pillar of light in the world](https://raw.githubusercontent.com/MeherBenSalem/Minimap/main/docs/curseforge/hud_round.jpg)
 
@@ -54,6 +54,8 @@ Press **M** to open the full map.
 - **Scroll to zoom toward the cursor**, from single blocks out to your whole explored world. Far zoom levels stay fast.
 - **Left click places a golden beacon** that rises as a pillar of light in the world, just like placing a beacon in the Lands Between.
 - **Right click opens the marker menu:** add a marker, place or remove the beacon, edit, delete, or return to your position.
+- **Operators can teleport from the map:** right click, *Teleport here*, confirm. You land on safe ground, never in lava or the void. Needs cheats in singleplayer, or the mod on the server.
+- **Pre-load the map in singleplayer** with `/remnantmap preload <radius>`: it draws land that already exists in your save, without walking there and without generating anything.
 - **Press G for the Grace list:** every marker with its distance, a search box, and category filters (Graces, Beacons, Bloodstains, Rest & Home, Settlements, Dungeons, Threats, Resources, Landmarks). Click an entry and the map glides to it.
 - A **compass rose**, a **rotating day-and-night dial**, a **scale bar**, cursor coordinates and control hints, all framed by **swirling clouds** in the corners.
 
@@ -69,6 +71,7 @@ Press **M** to open the full map.
 - **Tint them** with a palette of hues, name them, and choose whether each one shows on the minimap, carries a label, or raises a pillar of light.
 - **Pillars of light** rise from graces, beacons and bloodstains, with their name and distance floating beside them. Distant pillars are drawn on the horizon so you can always see them.
 - **A Bloodstain is left where you die**, and a **Resting Place marks your last bed**. Both are automatic.
+- **Coming from Xaero's Minimap?** Import its waypoints from Settings, Markers, *Import waypoints*. You see what will be added first, and your markers are backed up.
 
 ![The marker editor](https://raw.githubusercontent.com/MeherBenSalem/Minimap/main/docs/curseforge/marker_editor.jpg)
 ![A pillar of light rising from a Site of Grace at dusk](https://raw.githubusercontent.com/MeherBenSalem/Minimap/main/docs/curseforge/pillar_dusk.jpg)
@@ -96,7 +99,7 @@ On NeoForge, the settings also open from the mod list. On the world map, press *
 | **=** / **-** | Minimap zoom |
 | **B** | Place a marker where you stand |
 | **Left click** (world map) | Place or remove the beacon, select a marker |
-| **Right click** (world map) | Marker menu |
+| **Right click** (world map) | Marker menu (and *Teleport here* for operators) |
 | **G** (world map) | Grace and marker list |
 | **Space** (world map) | Return to your position |
 | **H** (world map) | Show / hide control hints |
@@ -109,7 +112,7 @@ All keys can be rebound in Controls.
 
 - **Loaders:** Fabric (requires Fabric API) and NeoForge; Fabric and Forge on 1.20.1
 - **Minecraft:** 26.3, 26.2, 26.1.2, 1.21.1 and 1.20.1
-- **Side:** client only
+- **Side:** client; optional on servers (only needed for map teleport)
 - **Saved data:** your maps and markers are stored per world and per server in `remnantminimaps/` in your game folder, and settings in `config/remnantminimaps.json`.
 - **Performance:** terrain is read within a small time budget each tick, saved in the background, and drawn from mipmapped textures, so the map stays smooth at every zoom level.
 

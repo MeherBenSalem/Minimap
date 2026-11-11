@@ -1,3 +1,42 @@
+# Remnants Minimap v2.1.0
+
+**Supported MC Versions:** 26.3, 26.2, 26.1.2, 1.21.1 (NeoForge/Fabric), 1.20.1 (Forge/Fabric)
+
+---
+
+## New
+
+- **Teleport from the world map (operators).** Right-click explored land or a marker on the world map,
+  choose **Teleport here** and confirm. The server decides: it needs the operator level of `/tp` (or a
+  permission node), checks the dimension and the world border, loads the area first and lands you on a safe
+  block, never in lava, fire or the void. In single-player it needs cheats. Logged like `/tp`. On servers it
+  needs Remnants Minimap installed on the server too; the action is not offered elsewhere.
+  Settings are in the new `config/remnantminimaps-server.json`. See `docs/map-teleport.md`.
+- **Pre-load the map (single-player).** `/remnantmap preload <radius>` fills in the map around you from your
+  world save without walking there; `status` and `cancel` show and stop it. It only reads land that already
+  exists, never generates terrain and never loads chunks into the world. Limits: Pre-load Radius (default
+  1024 blocks) and Pre-load Speed (default 8 chunks per tick) in the Performance settings.
+  See `docs/map-preload.md`.
+- **Import waypoints from Xaero's Minimap.** Settings, Markers, **Import waypoints** reads the waypoint files
+  Xaero's Minimap saved on your computer, shows what would be imported, backs up your markers and then adds
+  them. Existing markers are never changed. Xaero's World Map tiles are not imported.
+  See `docs/xaero-import.md`.
+
+## Changed
+
+- Remnants Minimap now also loads on dedicated servers (Fabric `environment` is `*`, NeoForge and Forge
+  register a both-sides entry point). It stays optional on both sides: vanilla clients can join a server
+  with it, and it works on servers without it as before.
+- Other mods can refuse a map teleport through `io.nightbeam.remnantminimaps.api.MapTeleportGuard`.
+
+### Upgrade Notes
+
+1. Replace `remnantminimaps-*-2.0.1.jar` (or 2.0.0) with the matching **2.1.0** jar. No config reset required.
+2. Server owners: installing the jar on the server is only needed for map teleport. It is on for operators
+   (level 2) by default; set `"enabled": false` in `config/remnantminimaps-server.json` to turn it off.
+
+---
+
 # Remnants Minimap v2.0.1
 
 **Supported MC Versions:** 26.3 (Fabric/NeoForge). Other versions are unchanged from 2.0.0.
