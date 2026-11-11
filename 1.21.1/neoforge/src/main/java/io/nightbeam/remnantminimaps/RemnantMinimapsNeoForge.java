@@ -1,10 +1,13 @@
 package io.nightbeam.remnantminimaps;
 
 import io.nightbeam.remnantminimaps.client.Keys;
+import io.nightbeam.remnantminimaps.client.MapTeleportClient;
 import io.nightbeam.remnantminimaps.client.RemnantClient;
 import io.nightbeam.remnantminimaps.client.screen.SettingsScreen;
+import io.nightbeam.remnantminimaps.network.MapTeleportPayloads;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -18,6 +21,7 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 
 @Mod(value = RemnantMinimaps.MOD_ID, dist = Dist.CLIENT)
@@ -29,6 +33,18 @@ public class RemnantMinimapsNeoForge {
                 event.registerBelow(VanillaGuiLayers.CHAT, RemnantMinimaps.id("minimap"),
                         (graphics, deltaTracker) -> RemnantClient.renderHud(graphics, deltaTracker.getGameTimeDeltaPartialTick(false))));
         container.registerExtensionPoint(IConfigScreenFactory.class, (mod, parent) -> new SettingsScreen(parent));
+        MapTeleportClient.init(new MapTeleportClient.Hooks() {
+            @Override
+            public boolean serverSupports() {
+                ClientPacketListener connection = Minecraft.getInstance().getConnection();
+                return connection != null && connection.hasChannel(MapTeleportPayloads.Request.TYPE);
+            }
+
+            @Override
+            public void send(MapTeleportPayloads.Request request) {
+                PacketDistributor.sendToServer(request);
+            }
+        });
 
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, event -> RemnantClient.onClientTick(Minecraft.getInstance()));
         NeoForge.EVENT_BUS.addListener(ChunkEvent.Load.class, event -> {

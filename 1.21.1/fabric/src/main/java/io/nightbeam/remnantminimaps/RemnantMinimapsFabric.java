@@ -1,12 +1,15 @@
 package io.nightbeam.remnantminimaps;
 
 import io.nightbeam.remnantminimaps.client.Keys;
+import io.nightbeam.remnantminimaps.client.MapTeleportClient;
 import io.nightbeam.remnantminimaps.client.RemnantClient;
+import io.nightbeam.remnantminimaps.network.MapTeleportPayloads;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.client.KeyMapping;
 
@@ -20,6 +23,19 @@ public class RemnantMinimapsFabric implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(RemnantClient::onClientTick);
         ClientChunkEvents.CHUNK_LOAD.register(RemnantClient::onChunkLoaded);
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> RemnantClient.onDisconnect());
+        ClientPlayNetworking.registerGlobalReceiver(MapTeleportPayloads.Access.TYPE,
+                (payload, context) -> context.client().execute(() -> MapTeleportClient.onAccess(payload.allowed())));
+        MapTeleportClient.init(new MapTeleportClient.Hooks() {
+            @Override
+            public boolean serverSupports() {
+                return ClientPlayNetworking.canSend(MapTeleportPayloads.Request.TYPE);
+            }
+
+            @Override
+            public void send(MapTeleportPayloads.Request request) {
+                ClientPlayNetworking.send(request);
+            }
+        });
         // The HUD is drawn from GuiMixin, just below the chat like on the other loaders.
         WorldRenderEvents.AFTER_ENTITIES.register(context -> {
             if (context.matrixStack() != null && context.consumers() != null) {

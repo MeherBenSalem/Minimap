@@ -7,8 +7,9 @@
     "authors": ["${mod_author}"],
     "license": "${license}",
     "icon": "assets/${mod_id}/icon.png",
-    "environment": "client",
+    "environment": "*",
     "entrypoints": {
+        "main": ["io.nightbeam.remnantminimaps.RemnantMinimapsFabricCommon"],
         "client": ["io.nightbeam.remnantminimaps.RemnantMinimapsFabric"]
     },
     "mixins": [
