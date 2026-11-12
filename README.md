@@ -52,6 +52,8 @@ markers and settings carry over between Minecraft versions. Fabric needs Fabric 
 - Pillars of light in the world for beacons, graces and bloodstains, with distance labels.
   Distant pillars are pulled to the horizon so they stay visible.
 - Automatic bloodstain on death and a resting-place marker at your last bed.
+- Waypoints from Xaero's Minimap can be imported (Settings, Markers, **Import waypoints**), with a dry-run
+  summary and a backup first. See [docs/xaero-import.md](docs/xaero-import.md).
 
 ## Controls
 

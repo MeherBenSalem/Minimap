@@ -63,6 +63,10 @@ public class SettingsScreen extends Screen {
                     RButton.Style.TAB, b -> switchTab(t)).selected(t == tab));
             y += 20;
         }
+        if (tab == Tab.MARKERS) {
+            addRenderableWidget(new RButton(panelX + 8, y + 10, TAB_W - 16, 18, Component.translatable("remnantminimaps.import.button"),
+                    RButton.Style.FRAMED, b -> minecraft.setScreen(new XaeroImportScreen(this))));
+        }
         contentX = panelX + TAB_W + 10;
         contentW = panelW - TAB_W - 22;
         contentY = top + 8;
