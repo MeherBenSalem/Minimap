@@ -2,6 +2,7 @@ package io.nightbeam.remnantminimaps.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import io.nightbeam.remnantminimaps.RemnantMinimaps;
+import io.nightbeam.remnantminimaps.client.preload.MapPreloader;
 import io.nightbeam.remnantminimaps.client.render.MinimapHud;
 import io.nightbeam.remnantminimaps.client.render.WorldBeacons;
 import io.nightbeam.remnantminimaps.client.render.gfx.Clip;
@@ -116,6 +117,7 @@ public final class RemnantClient {
         SCANNER.tick(level, map, player.chunkPosition().x, player.chunkPosition().z, sliceY,
                 mc.options.getEffectiveRenderDistance(), budget);
         map.tick(budget, player.getX(), player.getZ());
+        MapPreloader.tick(mc);
         session.saveMarkers();
     }
 
@@ -138,6 +140,7 @@ public final class RemnantClient {
     }
 
     private static void closeSession() {
+        MapPreloader.stop();
         if (session != null) {
             RemnantMinimaps.LOG.info("Saving map for {}", session.worldId);
             session.close();

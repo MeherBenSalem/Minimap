@@ -12,6 +12,19 @@
   "remnantminimaps.map.search": "Search markers",
   "remnantminimaps.map.list": "Sites of Grace & Markers",
   "remnantminimaps.map.list_empty": "Nothing charted yet",
+  "remnantminimaps.map.preload_progress": "Pre-loading the map: %s%%",
+
+  "remnantminimaps.preload.started": "Pre-loading the map: %s chunks within %s blocks, drawn from your save (no new terrain is generated). /remnantmap preload cancel stops it.",
+  "remnantminimaps.preload.capped": "Radius limited to %s blocks (Pre-load Radius in the Performance settings).",
+  "remnantminimaps.preload.progress": "Pre-loading the map: %s / %s chunks (%s%%)",
+  "remnantminimaps.preload.finished": "Map pre-load finished: %s chunks drawn, %s not generated yet, %s already in view, %s unreadable.",
+  "remnantminimaps.preload.cancelled": "Map pre-load cancelled: %s chunks drawn, %s not generated yet, %s already in view, %s unreadable.",
+  "remnantminimaps.preload.stopped_left": "Map pre-load stopped because you left the world: %s chunks drawn, %s not generated yet, %s already in view, %s unreadable.",
+  "remnantminimaps.preload.stopped_dimension": "Map pre-load stopped because you changed dimension: %s chunks drawn, %s not generated yet, %s already in view, %s unreadable.",
+  "remnantminimaps.preload.already_running": "A map pre-load is already running. /remnantmap preload status shows its progress, /remnantmap preload cancel stops it.",
+  "remnantminimaps.preload.not_running": "No map pre-load is running. Start one with /remnantmap preload <radius in blocks>.",
+  "remnantminimaps.preload.singleplayer_only": "Pre-loading reads the world save, so it only works in single-player or when you host a LAN world. On a server the map fills in as you explore.",
+  "remnantminimaps.preload.no_world": "Join a world first.",
 
   "remnantminimaps.dimension.minecraft.overworld": "The Overworld",
   "remnantminimaps.dimension.minecraft.the_nether": "The Nether",
@@ -226,6 +239,10 @@
 
   "remnantminimaps.option.scan_budget": "Mapping Budget",
   "remnantminimaps.option.scan_budget.desc": "Time per tick spent reading terrain. Higher fills the map faster, lower is lighter on slow machines.",
+  "remnantminimaps.option.preload_radius": "Pre-load Radius",
+  "remnantminimaps.option.preload_radius.desc": "Largest area /remnantmap preload may fill in from your single-player save, in blocks around you.",
+  "remnantminimaps.option.preload_speed": "Pre-load Speed",
+  "remnantminimaps.option.preload_speed.desc": "Saved chunks read per tick while pre-loading. Higher finishes sooner but keeps the game busier.",
   "remnantminimaps.option.max_regions": "Regions in Memory",
   "remnantminimaps.option.max_regions.desc": "How many 256x256 regions stay loaded. Each takes about 0.8 MB."
 }

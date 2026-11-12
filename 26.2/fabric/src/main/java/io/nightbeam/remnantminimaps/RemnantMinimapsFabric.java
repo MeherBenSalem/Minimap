@@ -1,10 +1,12 @@
 package io.nightbeam.remnantminimaps;
 
+import io.nightbeam.remnantminimaps.client.command.RemnantCommands;
 import io.nightbeam.remnantminimaps.client.Keys;
 import io.nightbeam.remnantminimaps.client.MapTeleportClient;
 import io.nightbeam.remnantminimaps.client.RemnantClient;
 import io.nightbeam.remnantminimaps.network.MapTeleportPayloads;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
@@ -23,6 +25,7 @@ public class RemnantMinimapsFabric implements ClientModInitializer {
             KeyMappingHelper.registerKeyMapping(key);
         }
         ClientTickEvents.END_CLIENT_TICK.register(RemnantClient::onClientTick);
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, context) -> RemnantCommands.register(dispatcher));
         ClientChunkEvents.CHUNK_LOAD.register(RemnantClient::onChunkLoaded);
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> RemnantClient.onDisconnect());
         HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT, RemnantMinimaps.id("minimap"), RemnantClient::renderHud);

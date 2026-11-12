@@ -209,6 +209,10 @@ public class SettingsScreen extends Screen {
                         new float[]{0.5f, 1.0f, 1.5f, 2.0f, 3.0f, 4.0f, 6.0f, 8.0f}, v -> String.format(Locale.ROOT, "%.1f ms", v)));
                 o.add(steps("max_regions", () -> (float) c.maxLoadedRegions, v -> c.maxLoadedRegions = Math.round(v),
                         new float[]{32, 64, 96, 128, 192, 256, 384, 512}, v -> Integer.toString(Math.round(v))));
+                o.add(steps("preload_radius", () -> (float) c.preloadMaxRadius, v -> c.preloadMaxRadius = Math.round(v),
+                        new float[]{256, 512, 1024, 2048, 4096}, v -> Math.round(v) + " m"));
+                o.add(steps("preload_speed", () -> (float) c.preloadChunksPerTick, v -> c.preloadChunksPerTick = Math.round(v),
+                        new float[]{2, 4, 8, 16, 32}, v -> Integer.toString(Math.round(v))));
             }
         }
         return o;

@@ -25,6 +25,8 @@ markers and settings carry over between Minecraft versions. Fabric needs Fabric 
   lines, engraved water, ink coastlines, building footprints and roads.
 - Unexplored land fades into fog; everything you explore is saved per world and dimension.
 - Classic and vivid palettes for players who prefer Minecraft's own map colors.
+- In single-player, `/remnantmap preload <radius>` fills in the map from the world save without walking
+  there, and never generates terrain. See [docs/map-preload.md](docs/map-preload.md).
 
 **Minimap**
 - Round map in a gold ring, or a square chart frame.
@@ -68,6 +70,14 @@ markers and settings carry over between Minecraft versions. Fabric needs Fabric 
 
 All keys can be rebound in the controls menu. Settings are also available from the
 NeoForge and Forge mod lists.
+
+## Commands
+
+| Command | Action |
+| --- | --- |
+| `/remnantmap preload <radius>` | Fill in the map within `<radius>` blocks from the save (single-player) |
+| `/remnantmap preload status` | Show pre-load progress |
+| `/remnantmap preload cancel` | Stop pre-loading |
 
 ## Data
 
