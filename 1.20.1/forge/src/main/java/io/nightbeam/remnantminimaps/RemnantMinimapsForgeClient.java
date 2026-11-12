@@ -1,10 +1,13 @@
 package io.nightbeam.remnantminimaps;
 
 import io.nightbeam.remnantminimaps.client.Keys;
+import io.nightbeam.remnantminimaps.client.MapTeleportClient;
 import io.nightbeam.remnantminimaps.client.RemnantClient;
 import io.nightbeam.remnantminimaps.client.screen.SettingsScreen;
+import io.nightbeam.remnantminimaps.network.MapTeleportPayloads;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraftforge.client.ConfigScreenHandler;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
@@ -32,6 +35,18 @@ final class RemnantMinimapsForgeClient {
                         (gui, graphics, partialTick, width, height) -> RemnantClient.renderHud(graphics, partialTick)));
         ModLoadingContext.get().registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class,
                 () -> new ConfigScreenHandler.ConfigScreenFactory((mc, parent) -> new SettingsScreen(parent)));
+        MapTeleportClient.init(new MapTeleportClient.Hooks() {
+            @Override
+            public boolean serverSupports() {
+                ClientPacketListener connection = Minecraft.getInstance().getConnection();
+                return connection != null && RemnantMinimapsForgeCommon.CHANNEL.isRemotePresent(connection.getConnection());
+            }
+
+            @Override
+            public void send(MapTeleportPayloads.Request request) {
+                RemnantMinimapsForgeCommon.CHANNEL.sendToServer(request);
+            }
+        });
 
         MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, TickEvent.ClientTickEvent.class, event -> {
             if (event.phase == TickEvent.Phase.END) {

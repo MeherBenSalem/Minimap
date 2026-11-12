@@ -9,7 +9,8 @@ displayName = "${mod_name}"
 authors = "${mod_author}"
 logoFile = "assets/${mod_id}/icon.png"
 description = '''${description}'''
-# Client-only: never ask servers for it, and do not mark servers without it as incompatible.
+# Optional on both sides: a client mod with an optional server half (map teleport). Servers and
+# clients without it stay compatible.
 displayTest = "IGNORE_ALL_VERSION"
 
 [[dependencies.${mod_id}]]
@@ -17,11 +18,11 @@ modId = "neoforge"
 type = "required"
 versionRange = "[${neoforge_version},)"
 ordering = "NONE"
-side = "CLIENT"
+side = "BOTH"
 
 [[dependencies.${mod_id}]]
 modId = "minecraft"
 type = "required"
 versionRange = "${minecraft_version_range}"
 ordering = "NONE"
-side = "CLIENT"
+side = "BOTH"

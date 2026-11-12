@@ -128,6 +128,7 @@ public final class RemnantClient {
     }
 
     public static void onDisconnect() {
+        MapTeleportClient.reset();
         closeSession();
     }
 

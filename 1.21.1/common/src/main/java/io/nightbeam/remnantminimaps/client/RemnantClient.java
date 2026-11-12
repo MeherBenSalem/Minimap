@@ -127,6 +127,7 @@ public final class RemnantClient {
     }
 
     public static void onDisconnect() {
+        MapTeleportClient.reset();
         // Some loaders report the disconnect from the network thread; closing frees GPU textures.
         Minecraft mc = Minecraft.getInstance();
         if (mc.isSameThread()) {

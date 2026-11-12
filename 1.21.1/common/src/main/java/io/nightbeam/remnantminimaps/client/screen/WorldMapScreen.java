@@ -2,6 +2,7 @@ package io.nightbeam.remnantminimaps.client.screen;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import io.nightbeam.remnantminimaps.client.Keys;
+import io.nightbeam.remnantminimaps.client.MapTeleportClient;
 import io.nightbeam.remnantminimaps.client.RemnantClient;
 import io.nightbeam.remnantminimaps.client.TimeOfDay;
 import io.nightbeam.remnantminimaps.client.render.MapPainter;
@@ -20,6 +21,7 @@ import io.nightbeam.remnantminimaps.core.marker.Marker;
 import io.nightbeam.remnantminimaps.core.marker.MarkerGroup;
 import io.nightbeam.remnantminimaps.core.marker.MarkerIcon;
 import io.nightbeam.remnantminimaps.core.marker.MarkerStore;
+import io.nightbeam.remnantminimaps.network.MapTeleportPayloads;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.AbstractClientPlayer;
@@ -527,7 +529,7 @@ public class WorldMapScreen extends Screen {
         if (cfg.worldMapHints) {
             int x = 10;
             x = hint(g, x, y, "LMB", "remnantminimaps.hint.beacon");
-            x = hint(g, x, y, "RMB", "remnantminimaps.hint.menu");
+            x = hint(g, x, y, "RMB", MapTeleportClient.available() ? "remnantminimaps.hint.menu_teleport" : "remnantminimaps.hint.menu");
             x = hint(g, x, y, "G", "remnantminimaps.hint.list");
             x = hint(g, x, y, "↕", "remnantminimaps.hint.zoom");
             x = hint(g, x, y, "Space", "remnantminimaps.hint.center");
@@ -723,10 +725,20 @@ public class WorldMapScreen extends Screen {
                 target.showOnMinimap = !target.showOnMinimap;
                 store.changed();
             }));
+            if (MapTeleportClient.available()) {
+                int hint = target.hasY ? target.y : MapTeleportPayloads.UNKNOWN_Y;
+                items.add(new MenuItem("remnantminimaps.menu.teleport_marker", false,
+                        () -> confirmTeleport(mx, my, target.x, target.z, hint)));
+            }
             items.add(new MenuItem("remnantminimaps.menu.delete", true, () -> store.remove(target)));
         } else {
             items.add(new MenuItem("remnantminimaps.menu.beacon", false, () -> placeBeacon(wx, wz)));
             items.add(new MenuItem("remnantminimaps.menu.add", false, () -> addMarker(wx, wz)));
+            DimensionMap map = map();
+            if (MapTeleportClient.available() && map != null && map.explored(wx, wz)) {
+                int hint = map.columnHeight(wx, wz) + 1;
+                items.add(new MenuItem("remnantminimaps.menu.teleport", false, () -> confirmTeleport(mx, my, wx, wz, hint)));
+            }
             if (store.beacon(dimension) != null) {
                 items.add(new MenuItem("remnantminimaps.menu.beacon_remove", true, () -> store.clearBeacon(dimension)));
             }
@@ -739,6 +751,17 @@ public class WorldMapScreen extends Screen {
         MarkerStore store = markers();
         store.setBeacon(RemnantClient.currentDimension(), wx, wz, Component.translatable("remnantminimaps.marker.beacon").getString());
         minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.AMETHYST_BLOCK_CHIME, 1.4f, 0.9f));
+    }
+
+    /** Second step of "Teleport here", so a stray click never moves the player. */
+    private void confirmTeleport(double mx, double my, int wx, int wz, int yHint) {
+        List<MenuItem> items = new ArrayList<>();
+        items.add(new MenuItem("remnantminimaps.menu.teleport_confirm", false, () -> {
+            MapTeleportClient.request(RemnantClient.currentDimension(), wx, wz, yHint);
+            onClose();
+        }, wx, wz));
+        items.add(new MenuItem("remnantminimaps.menu.cancel", false, () -> {}));
+        menu = new ContextMenu((int) mx, (int) my, items);
     }
 
     private void addMarker(int wx, int wz) {
@@ -756,7 +779,11 @@ public class WorldMapScreen extends Screen {
         }
     }
 
-    private record MenuItem(String key, boolean danger, Runnable action) {}
+    private record MenuItem(String key, boolean danger, Runnable action, Object... args) {
+        Component label() {
+            return Component.translatable(key, args);
+        }
+    }
 
     private final class ContextMenu {
         private final List<MenuItem> items;
@@ -769,7 +796,7 @@ public class WorldMapScreen extends Screen {
             this.items = items;
             int maxW = 0;
             for (MenuItem item : items) {
-                maxW = Math.max(maxW, font.width(Component.translatable(item.key())));
+                maxW = Math.max(maxW, font.width(item.label()));
             }
             this.w = maxW + 28;
             this.h = items.size() * 15 + 10;
@@ -795,7 +822,7 @@ public class WorldMapScreen extends Screen {
                 }
                 MenuItem item = items.get(i);
                 int color = i == hoveredItem ? Ui.GOLD_BRIGHT : item.danger() ? 0xFFE08A78 : Ui.IVORY;
-                Ui.text(g, font, Component.translatable(item.key()), x + 14, ry + 4, color);
+                Ui.text(g, font, item.label(), x + 14, ry + 4, color);
             }
         }
     }
