@@ -1,0 +1,57 @@
+# Renders listing artwork in marketing/images/ with marketing/source/render.cjs on a GitHub runner
+# (headless Chromium through Playwright) and uploads marketing/images as the marketing-images artifact. Runs only by hand.
+# It never builds or publishes the mod.
+
+name: Marketing artwork
+
+on:
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: "Space-separated render.cjs targets (blank renders everything)"
+        required: false
+        default: "banner"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marketing-artwork-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Require main
+        if: ${{ github.ref != 'refs/heads/main' }}
+        run: |
+          echo "Artwork is only rendered on main."
+          exit 1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: Render the artwork
+        env:
+          TARGETS: ${{ inputs.targets }}
+        run: NODE_PATH="$PWD/node_modules" node marketing/source/render.cjs $TARGETS
+      # main is protected against bot pushes, so the images come back as an artifact for a maintainer to commit.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: marketing-images
+          path: marketing/images
+      # The same images, printed into the log as base64, for maintainers whose network can read logs but not artifact storage.
+      - name: Print images into the log
+        run: |
+          tar -C marketing/images -czf "$RUNNER_TEMP/images.tgz" .
+          echo "images.tgz sha256 $(sha256sum "$RUNNER_TEMP/images.tgz" | cut -d' ' -f1)"
+          echo "----- BEGIN IMAGES -----"
+          base64 -w 76 "$RUNNER_TEMP/images.tgz"
+          echo "----- END IMAGES -----"
