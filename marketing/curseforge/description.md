@@ -8,7 +8,7 @@ Remnants Minimap redraws your world as a hand-inked chart: parchment lands, engr
 
 **Client-side.** It works in singleplayer and on any server, and the server needs nothing installed. Install it on a server too only if operators should be able to teleport from the map.
 
-**2.0** is available for **Fabric, Forge and NeoForge** on **1.20.1, 1.21.1, 26.1.2, 26.2 and 26.3**.
+**2.0** is available for **Fabric, Forge and NeoForge** on **1.20.1, 1.21.1, 26.2 and 26.3**.
 
 ![divider](https://raw.githubusercontent.com/MeherBenSalem/Minimap/main/marketing/images/divider.png)
 
@@ -116,7 +116,7 @@ All keys can be rebound in Controls. *Toggle Minimap Rotation* and *Minimap Sett
 | --- | --- | --- |
 | 1.20.1 | Fabric, Forge | Fabric API (Fabric) |
 | 1.21.1 | Fabric, NeoForge | Fabric API (Fabric) |
-| 26.1.2 · 26.2 · 26.3 | Fabric, NeoForge | Fabric API (Fabric) |
+| 26.2 · 26.3 | Fabric, NeoForge | Fabric API (Fabric) |
 
 - Download the file whose name matches your loader and Minecraft version, for example `remnantminimaps-fabric-26.3-….jar`.
 - Install it on your **client**. Servers do not need it, unless operators should be able to teleport from the map.

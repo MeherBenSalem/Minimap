@@ -1,0 +1,1 @@
+A client-side soulslike map with parchment cartography, a gilded rotating minimap, 30 marker emblems and pillars of light that guide you home.

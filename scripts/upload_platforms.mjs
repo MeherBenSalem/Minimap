@@ -1,15 +1,17 @@
 /**
- * Upload Remnants Minimap jars from all-jars/ to Modrinth and CurseForge.
+ * Upload Remnants Minimap jars from releases/ (or --jar-dir) to Modrinth and CurseForge.
  *
  *   node scripts/upload_platforms.mjs --version 2.0.0 [--modrinth-only | --curseforge-only]
  *                                     [--dry-run] [--sync-project] [--changelog-file FILE]
- *                                     [--games 1.21.1,1.20.1]
+ *                                     [--games 1.21.1,1.20.1] [--jar-dir DIR]
  *
  * Jars are named remnantminimaps-<loader>-<minecraft>-<version>.jar; each one is published for exactly
- * that loader and Minecraft version (see SUPPORTED below for the version roots of this repository).
+ * that loader and Minecraft version (see SUPPORTED below: the 8 NightBeam convention targets).
+ * A dry run without tokens only prints what would be uploaded and makes no network call.
  *
  * Environment: MODRINTH_TOKEN, CURSEFORGE_TOKEN (only the ones for the selected platforms).
- * Optional: MODRINTH_PROJECT_ID, CURSEFORGE_PROJECT_ID to override the project ids below.
+ * Optional: MODRINTH_ID, CURSEFORGE_ID (the repo variables; MODRINTH_PROJECT_ID, CURSEFORGE_PROJECT_ID are
+ * still read) to override the project ids below.
  * Locally, secrets can also live in secrets/local.env (KEY=value lines, never committed).
  */
 import fs from "fs";
@@ -19,22 +21,23 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
 
-const MODRINTH_ID = process.env.MODRINTH_PROJECT_ID || "lLviL6Oq";
-const CURSEFORGE_ID = process.env.CURSEFORGE_PROJECT_ID || "1564458";
+const MODRINTH_ID = process.env.MODRINTH_ID || process.env.MODRINTH_PROJECT_ID || "lLviL6Oq";
+const CURSEFORGE_ID = process.env.CURSEFORGE_ID || process.env.CURSEFORGE_PROJECT_ID || "1564458";
 const MOD_TITLE = "Remnants Minimap";
-const JAR_DIR = path.join(ROOT, "all-jars");
-const ICON_PATH = path.join(ROOT, "docs", "icon.png");
-const DESCRIPTION_PATH = path.join(ROOT, "CURSEFORGE.md");
+const DEFAULT_JAR_DIR = path.join(ROOT, "releases");
+// The Modrinth listing: marketing/modrinth/ is made from the CurseForge copy by tools/make_modrinth_md.py.
+const ICON_PATH = path.join(ROOT, "marketing", "images", "icon.png");
+const DESCRIPTION_PATH = path.join(ROOT, "marketing", "modrinth", "description.md");
+const SUMMARY_PATH = path.join(ROOT, "marketing", "modrinth", "summary.txt");
 const RELEASE_STATE_PATH = path.join(ROOT, ".release-upload-state.json");
 
 const MODRINTH_FABRIC_API = "P7dR8mSH";
 const CURSEFORGE_LOADER_IDS = { fabric: 7499, forge: 7498, neoforge: 10150 };
 
-/** Minecraft version of each version root and the loaders it builds. */
+/** Minecraft version of each version root and the loaders it builds (NightBeam convention: 8 jars). */
 const SUPPORTED = {
   "26.3": ["fabric", "neoforge"],
   "26.2": ["fabric", "neoforge"],
-  "26.1.2": ["fabric", "neoforge"],
   "1.21.1": ["fabric", "neoforge"],
   "1.20.1": ["fabric", "forge"],
 };
@@ -50,7 +53,7 @@ function loadLocalEnv() {
 }
 
 function parseArgs(argv) {
-  const out = { curseforgeOnly: false, modrinthOnly: false, dryRun: false, syncProject: false };
+  const out = { curseforgeOnly: false, modrinthOnly: false, dryRun: false, syncProject: false, jarDir: DEFAULT_JAR_DIR };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--version") out.version = argv[++i];
@@ -59,6 +62,7 @@ function parseArgs(argv) {
     else if (a === "--modrinth-only") out.modrinthOnly = true;
     else if (a === "--dry-run") out.dryRun = true;
     else if (a === "--sync-project") out.syncProject = true;
+    else if (a === "--jar-dir") out.jarDir = path.resolve(argv[++i] || "");
     else if (a === "--games") out.games = (argv[++i] || "").split(/[\s,]+/).filter(Boolean);
     else throw new Error(`Unknown arg ${a}`);
   }
@@ -83,12 +87,12 @@ function parseJar(jar) {
   return { jar, name, loader, game, version: m[3] };
 }
 
-function collectJars(version) {
-  if (!fs.existsSync(JAR_DIR)) throw new Error(`Missing ${JAR_DIR}; build first`);
+function collectJars(version, jarDir) {
+  if (!fs.existsSync(jarDir)) throw new Error(`Missing ${jarDir}; build first (./gradlew buildAll)`);
   return fs
-    .readdirSync(JAR_DIR)
+    .readdirSync(jarDir)
     .filter((n) => n.startsWith("remnantminimaps-") && n.endsWith(`-${version}.jar`))
-    .map((n) => path.join(JAR_DIR, n))
+    .map((n) => path.join(jarDir, n))
     .sort();
 }
 
@@ -147,7 +151,8 @@ async function syncModrinthProject(token, dryRun) {
     console.log("[dry-run] Modrinth project: title, description and icon");
     return;
   }
-  const patch = { title: MOD_TITLE, description: "An Elden Ring inspired minimap and world map: parchment cartography, Sites of Grace, beacons and markers." };
+  const summary = fs.existsSync(SUMMARY_PATH) ? fs.readFileSync(SUMMARY_PATH, "utf8").trim() : "";
+  const patch = { title: MOD_TITLE, description: summary || "An Elden Ring inspired minimap and world map: parchment cartography, Sites of Grace, beacons and markers." };
   if (body) patch.body = body;
   await modrinth(`/project/${MODRINTH_ID}`, token, {
     method: "PATCH",
@@ -291,8 +296,8 @@ async function main() {
   loadLocalEnv();
   const args = parseArgs(process.argv);
   // --games publishes only those Minecraft versions, e.g. roots added to an already released version.
-  const jars = collectJars(args.version).map(parseJar).filter((j) => !args.games || args.games.includes(j.game));
-  if (!jars.length) throw new Error(`No remnantminimaps jars for version ${args.version} in all-jars/`);
+  const jars = collectJars(args.version, args.jarDir).map(parseJar).filter((j) => !args.games || args.games.includes(j.game));
+  if (!jars.length) throw new Error(`No remnantminimaps jars for version ${args.version} in ${args.jarDir}`);
   for (const game of args.games || []) {
     const missing = SUPPORTED[game].filter((loader) => !jars.some((j) => j.game === game && j.loader === loader));
     if (missing.length) throw new Error(`--games: no ${missing.join(", ")} jar for Minecraft ${game}`);

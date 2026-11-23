@@ -7,12 +7,14 @@ Listing copy and artwork for CurseForge and Modrinth. Nothing here ships in the 
 | File | Use |
 | --- | --- |
 | [`curseforge/description.md`](curseforge/description.md) | Full project description (Markdown; also works on Modrinth) |
-| [`curseforge/summary.txt`](curseforge/summary.txt) | Short project summary (214 characters) |
+| [`curseforge/summary.txt`](curseforge/summary.txt) | Short project summary (142 characters) |
+| [`modrinth/description.md`](modrinth/description.md) | The Modrinth description, made from the CurseForge copy by `python3 tools/make_modrinth_md.py .` (the screenshots go in the project's Gallery tab instead) |
+| [`modrinth/summary.txt`](modrinth/summary.txt) | The Modrinth summary (the same text). The Publish workflow sends both to Modrinth, with `images/icon.png` |
 | [`../CHANGELOG.md`](../CHANGELOG.md) | Release notes; the publish workflow uses the top section |
 
 Image links in the description point at `raw.githubusercontent.com/MeherBenSalem/Minimap/main/marketing/images/...`, so they work once this folder is on `main`. To host on CurseForge instead, upload the images to the project gallery and replace each URL.
 
-The publish workflow still refreshes the Modrinth page from `../CURSEFORGE.md`. Point it at `curseforge/description.md` (or copy this file over `CURSEFORGE.md`) to use the new listing there.
+The publish workflow refreshes the Modrinth page from `modrinth/` (always on a tag, and on manual runs with `sync_project`). After editing `curseforge/description.md` or `curseforge/summary.txt`, run `python3 tools/make_modrinth_md.py .` to refresh the Modrinth copy. CurseForge has no API for the description, so paste `curseforge/description.md` there by hand.
 
 ## Images
 
@@ -62,7 +64,7 @@ NODE_PATH="$(npm root -g)" node marketing/source/render.cjs banner icon     # se
 NODE_PATH="$(npm root -g)" node marketing/source/render.cjs backdrop        # only the card background
 ```
 
-- `VERSIONS` and `LOADERS` at the top of `source/render.cjs` set the versions and loader pills on the banner. Keep them in step with the compatibility table in the description.
+- `VERSIONS` and `LOADERS` at the top of `source/render.cjs` set the versions and loader pills on the banner. Keep them in step with the compatibility table in `curseforge/description.md` (then rerun `tools/make_modrinth_md.py`). Only the NightBeam convention's targets are listed: 1.20.1 (Fabric, Forge) and 1.21.1, 26.2, 26.3 (Fabric, NeoForge).
 - `source/backdrop.jpg` is rendered by the `backdrop` target: `worldmap.jpg`, blurred and darkened until nothing in it is legible.
 - `source/art/` holds copies of the mod's art: `logo.png` (from `docs/icon.png`, made by `tools/generate_icon.py`), and `markers.png` and `cloud_corner.png` (from `26.2/common/src/main/resources/assets/remnantminimaps/textures/gui/`, made by `tools/generate_assets.py`). If the mod's art changes, copy the new files here and rerun the script. The emblems on `card-markers.png` are drawn from `markers.png` with the default tints from `MarkerIcon.java`.
 - Crops of screenshots are done in HTML (`crop()` and `lens()` in the script), so the files in `images/screenshots/` stay untouched.

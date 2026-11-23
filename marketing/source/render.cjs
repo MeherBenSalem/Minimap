@@ -6,7 +6,7 @@ const fs = require('fs');
 const { chromium } = require('playwright');
 
 // Printed on the banner. Keep in sync with the compatibility table in curseforge/description.md.
-const VERSIONS = ['1.20.1', '1.21.1', '26.1.2', '26.2'];
+const VERSIONS = ['1.20.1', '1.21.1', '26.2', '26.3'];
 const LOADERS = ['Fabric', 'Forge', 'NeoForge'];
 
 const root = path.resolve(__dirname, '..', '..');

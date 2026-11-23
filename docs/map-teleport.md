@@ -35,7 +35,7 @@ The level check is a permission node where the loader has a permission API, so p
 | NeoForge (26.x, 1.21.1) | `remnantminimaps.map_teleport` (NeoForge `PermissionAPI`) | configured operator level |
 | Forge 1.20.1 | `remnantminimaps.map_teleport` (Forge `PermissionAPI`) | configured operator level |
 | Fabric 26.3, 26.2 | `remnantminimaps:map_teleport` (Fabric API permission module) | configured operator level |
-| Fabric 26.1.2, 1.21.1, 1.20.1 | none (that Fabric API has no permission module) | configured operator level |
+| Fabric 1.21.1, 1.20.1 | none (that Fabric API has no permission module) | configured operator level |
 
 The single-player rule ("cheats on") is checked before the node, so a permission mod cannot open map
 teleport in a world without cheats.

@@ -1,3 +1,19 @@
+// Root aggregator for Remnants Minimap (NightBeam convention, modelled on MeherBenSalem/Bosses).
+//
+// Each Minecraft version folder is its own Gradle build with its own wrapper; this build only drives them.
+//   ./gradlew buildAll      build every workspace, then copy exactly the 8 loader jars into releases/
+//   ./gradlew build262      build one workspace (keys: 1201, 1211, 262, 263)
+//   ./gradlew checkVersions fail unless every workspace has the same version= (and VERSION matches)
+//   ./gradlew syncVersion -PmodVersion=x.y.z   (also writes the root VERSION file; without -PmodVersion it
+//                                               copies VERSION into every workspace)
+//
+// Java: 1.20.1 (Java 17 bytecode) and 1.21.1 run their Gradle 8.11 on Java 21; the 26.x builds need Gradle itself on
+// Java 25. Pass -Pjava21Home=<jdk> / -Pjava25Home=<jdk>, or set JAVA_HOME_21_X64 / JAVA_HOME_25_X64 (setup-java
+// does) or JAVA_HOME_21 / JAVA_HOME_25. Without them a workspace inherits this build's JAVA_HOME.
+
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+
 String wrapperCmd(String rootDirName) {
     File root = file(rootDirName)
     if (System.getProperty('os.name').toLowerCase().contains('win')) {
@@ -6,135 +22,151 @@ String wrapperCmd(String rootDirName) {
     return new File(root, 'gradlew').absolutePath
 }
 
-String javaHomeFor(String rootDirName) {
-    def props = file("${rootDirName}/gradle.properties")
-    if (!props.exists()) {
-        return System.getenv('JAVA_HOME')
+Properties workspaceProps(String dir) {
+    def props = new Properties()
+    def f = file("${dir}/gradle.properties")
+    if (!f.exists()) {
+        throw new GradleException("Missing ${f}")
     }
-    def javaVersion = props.readLines()
-        .find { it.startsWith('java_version=') }
-        ?.substring('java_version='.length())
-    switch (javaVersion) {
-        case '17':
-            return System.getenv('JAVA_HOME_17') ?: System.getenv('JAVA_HOME')
-        case '21':
-            return System.getenv('JAVA_HOME_21') ?: System.getenv('JAVA_HOME')
-        case '25':
-            return System.getenv('JAVA_HOME_25') ?: System.getenv('JAVA_HOME')
-        default:
-            return System.getenv('JAVA_HOME')
-    }
+    f.withInputStream { props.load(it) }
+    return props
 }
 
-void configureWorkspaceBuild(String taskName, String rootDirName, String description) {
-    tasks.register(taskName, Exec) {
-        group = 'build'
-        it.description = description
-        workingDir = file(rootDirName)
-        def jh = javaHomeFor(rootDirName)
-        if (jh) {
-            environment 'JAVA_HOME', jh
+// The 8 supported targets: 1.20.1 Fabric + Forge; 1.21.1, 26.2, 26.3 Fabric + NeoForge.
+def workspaces = [
+    '1201': [dir: '1.20.1', loaders: ['fabric', 'forge'], java: 21],
+    '1211': [dir: '1.21.1', loaders: ['fabric', 'neoforge'], java: 21],
+    '262' : [dir: '26.2', loaders: ['fabric', 'neoforge'], java: 25],
+    '263' : [dir: '26.3', loaders: ['fabric', 'neoforge'], java: 25],
+]
+def javaHomes = [
+    21: findProperty('java21Home') ?: System.getenv('JAVA_HOME_21_X64') ?: System.getenv('JAVA_HOME_21'),
+    25: findProperty('java25Home') ?: System.getenv('JAVA_HOME_25_X64') ?: System.getenv('JAVA_HOME_25'),
+]
+// Lets each workspace's toolchain lookup find the JDKs setup-java installs (Java 17 for 1.20.1 bytecode).
+def toolchainEnv = '-Porg.gradle.java.installations.fromEnv=JAVA_HOME_17_X64,JAVA_HOME_21_X64,JAVA_HOME_25_X64,JAVA_HOME_17,JAVA_HOME_21,JAVA_HOME_25'
+def loaderNames = [fabric: 'Fabric', forge: 'Forge', neoforge: 'NeoForge']
+
+// <mod_id>-<loader>-<minecraft>-<version>.jar, from each workspace's own gradle.properties.
+def expectedJars = workspaces.values().collectMany { ws ->
+    def props = workspaceProps(ws.dir)
+    ws.loaders.collect { loader ->
+        def name = "${props.mod_id}-${loader}-${props.minecraft_version}-${props.version}.jar"
+        file("${ws.dir}/${loader}/build/libs/${name}")
+    }
+}
+def workspaceVersions = workspaces.values().collectEntries { ws -> [(ws.dir): workspaceProps(ws.dir).version] }
+// The root VERSION file mirrors the workspaces' version= (checked by checkVersions and scripts/check_targets.py).
+def versionFile = file('VERSION')
+
+tasks.register('checkVersions') {
+    group = 'verification'
+    description = 'Fail unless every workspace gradle.properties has the same version= (and VERSION matches).'
+    doLast {
+        def distinct = workspaceVersions.values().toSet()
+        if (distinct.size() != 1 || distinct.contains(null)) {
+            throw new GradleException("Workspace versions differ: ${workspaceVersions}")
         }
-        commandLine wrapperCmd(rootDirName), 'build', '--no-daemon'
-    }
-}
-
-void configureWorkspaceClean(String taskName, String rootDirName, String description) {
-    tasks.register(taskName, Exec) {
-        group = 'build'
-        it.description = description
-        workingDir = file(rootDirName)
-        def jh = javaHomeFor(rootDirName)
-        if (jh) {
-            environment 'JAVA_HOME', jh
+        if (versionFile.isFile() && versionFile.text.trim() != distinct.first()) {
+            throw new GradleException("VERSION is ${versionFile.text.trim()}, the workspaces are at ${distinct.first()}")
         }
-        commandLine wrapperCmd(rootDirName), 'clean', '--no-daemon'
+        println "All workspaces at version ${distinct.first()}"
     }
 }
 
-configureWorkspaceBuild('build1201', '1.20.1', 'Build all 1.20.1 loaders (Fabric + Forge).')
-configureWorkspaceBuild('build1211', '1.21.1', 'Build all 1.21.1 loaders (Fabric + NeoForge).')
-configureWorkspaceBuild('build2612', '26.1.2', 'Build all 26.1.2 loaders (Fabric + NeoForge).')
-configureWorkspaceBuild('build262', '26.2', 'Build all 26.2 loaders (Fabric + NeoForge).')
-configureWorkspaceBuild('build263', '26.3', 'Build all 26.3 loaders (Fabric + NeoForge).')
+def previous = null
+workspaces.each { key, ws ->
+    def javaHome = javaHomes[ws.java]
+    def buildTask = tasks.register("build${key}", Exec) {
+        group = 'build'
+        description = "Build all ${ws.dir} loaders (${ws.loaders.collect { loaderNames[it] }.join(' + ')})."
+        workingDir = file(ws.dir)
+        commandLine wrapperCmd(ws.dir), 'build', toolchainEnv
+        if (javaHome) environment 'JAVA_HOME', javaHome
+    }
+    // One workspace at a time: each runs its own Gradle with -Xmx3G.
+    if (previous != null) {
+        def before = previous
+        buildTask.configure { mustRunAfter before }
+    }
+    previous = buildTask
 
-configureWorkspaceClean('clean1201', '1.20.1', 'Clean all 1.20.1 loaders.')
-configureWorkspaceClean('clean1211', '1.21.1', 'Clean all 1.21.1 loaders.')
-configureWorkspaceClean('clean2612', '26.1.2', 'Clean all 26.1.2 loaders.')
-configureWorkspaceClean('clean262', '26.2', 'Clean all 26.2 loaders.')
-configureWorkspaceClean('clean263', '26.3', 'Clean all 26.3 loaders.')
+    tasks.register("clean${key}", Exec) {
+        group = 'build'
+        description = "Clean the ${ws.dir} workspace."
+        workingDir = file(ws.dir)
+        commandLine wrapperCmd(ws.dir), 'clean'
+        if (javaHome) environment 'JAVA_HOME', javaHome
+    }
+}
 
 tasks.register('dist') {
     group = 'build'
-    description = 'Build ALL versions and copy every mod JAR into all-jars/.'
-    dependsOn 'build1201', 'build1211', 'build2612', 'build262', 'build263'
-    notCompatibleWithConfigurationCache('Copies workspace JARs with dynamic file trees.')
+    description = 'Build every workspace and copy the 8 loader jars into releases/.'
+    dependsOn 'checkVersions'
+    dependsOn workspaces.keySet().collect { "build${it}" }
+    def outDir = file('releases')
+    def jars = expectedJars
     doLast {
-        def outDir = project.layout.projectDirectory.dir('all-jars').asFile
-        outDir.mkdirs()
-        def dirs = ['1.20.1/fabric', '1.20.1/forge', '1.21.1/fabric', '1.21.1/neoforge',
-                    '26.1.2/fabric', '26.1.2/neoforge', '26.2/fabric', '26.2/neoforge',
-                    '26.3/fabric', '26.3/neoforge']
-        dirs.each { modDir ->
-            def libsDir = project.file("${modDir}/build/libs")
-            if (libsDir.exists()) {
-                project.fileTree(libsDir).matching {
-                    include '*.jar'
-                    exclude '*-sources.jar', '*-javadoc.jar', '*-dev.jar', '*-shadow.jar', '*-dev-shadow.jar'
-                }.each { jar ->
-                    project.copy {
-                        from jar
-                        into outDir
-                    }
-                }
-            }
+        def missing = jars.findAll { !it.isFile() }
+        if (missing) {
+            throw new GradleException("Missing loader jars:\n  ${missing.join('\n  ')}")
         }
-        println "All JARs collected in: ${outDir.absolutePath}"
+        outDir.mkdirs()
+        jars.each { jar ->
+            Files.copy(jar.toPath(), new File(outDir, jar.name).toPath(), StandardCopyOption.REPLACE_EXISTING)
+            println "  ${jar.name}"
+        }
+        println "${jars.size()} loader jars collected in: ${outDir.absolutePath}"
     }
 }
 
 tasks.register('buildAll') {
     group = 'build'
-    description = 'Build ALL versions and collect JARs into all-jars/.'
+    description = 'Build every workspace and collect the 8 loader jars into releases/.'
     dependsOn 'dist'
+}
+
+tasks.register('build') {
+    group = 'build'
+    description = 'Alias for buildAll so ./gradlew build still produces every loader jar.'
+    dependsOn 'buildAll'
 }
 
 tasks.register('cleanAll') {
     group = 'build'
-    description = 'Clean ALL versions and all-jars/.'
-    dependsOn 'clean1201', 'clean1211', 'clean2612', 'clean262', 'clean263'
+    description = 'Clean every workspace and the collected jars in releases/.'
+    dependsOn workspaces.keySet().collect { "clean${it}" }
+    def outDir = file('releases')
     doLast {
-        def outDir = file('all-jars')
-        if (outDir.exists()) {
-            outDir.deleteDir()
-            println 'Cleaned all-jars directory.'
+        // releases/ holds only jars built by dist (none are committed in this repo).
+        if (outDir.isDirectory()) {
+            outDir.listFiles().findAll { it.name.endsWith('.jar') }.each { it.delete() }
+            println 'Cleaned releases/.'
         }
     }
 }
 
 tasks.register('syncVersion') {
     group = 'build'
-    description = 'Set version= in all workspace gradle.properties (use -PmodVersion=x.y.z or VERSION file).'
+    description = 'Set version= in every workspace gradle.properties and VERSION (use -PmodVersion=x.y.z, or the VERSION file).'
+    def v = findProperty('modVersion')
+    def files = workspaces.values().collect { file("${it.dir}/gradle.properties") }
     doLast {
-        def v = project.findProperty('modVersion')
-        if (!v) {
-            def versionFile = file('VERSION')
-            if (versionFile.exists()) {
-                v = versionFile.text.trim()
-            }
+        if (!v && versionFile.isFile()) {
+            v = versionFile.text.trim()
         }
         if (!v) {
-            throw new GradleException('Pass -PmodVersion=x.y.z or add a VERSION file at repo root.')
+            throw new GradleException('Pass -PmodVersion=x.y.z or add a VERSION file at the repository root.')
         }
-        file('VERSION').text = v + System.lineSeparator()
-        ['1.20.1', '1.21.1', '26.1.2', '26.2', '26.3'].each { dir ->
-            def props = file("${dir}/gradle.properties")
-            if (!props.exists()) {
-                throw new GradleException("Missing ${props}")
+        versionFile.text = v + System.lineSeparator()
+        println "Synced ${versionFile} -> ${v}"
+        files.each { f ->
+            if (!f.exists()) {
+                throw new GradleException("Missing ${f}")
             }
-            def lines = props.readLines()
             def updated = false
-            def out = lines.collect { line ->
+            def out = f.readLines().collect { line ->
                 if (line.startsWith('version=')) {
                     updated = true
                     return "version=${v}"
@@ -142,10 +174,10 @@ tasks.register('syncVersion') {
                 return line
             }
             if (!updated) {
-                throw new GradleException("No version= line in ${props}")
+                throw new GradleException("No version= line in ${f}")
             }
-            props.text = out.join(System.lineSeparator()) + System.lineSeparator()
-            println "Synced ${props} -> ${v}"
+            f.text = out.join(System.lineSeparator()) + System.lineSeparator()
+            println "Synced ${f} -> ${v}"
         }
     }
 }

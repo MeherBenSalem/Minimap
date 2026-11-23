@@ -11,8 +11,11 @@ Thanks for contributing to Remnants Minimap.
 ## Development workflow
 
 1. Fork the repository and create a branch from `main`.
-2. Make the smallest coherent change that solves the problem.
-3. Build the version root you changed from inside that folder, for example `26.2/`.
+2. Make the smallest coherent change that solves the problem, in the relevant Minecraft version workspace
+   (`1.20.1/`, `1.21.1/`, `26.2/` or `26.3/`).
+3. Build the workspace you changed (`./gradlew build` from that folder: Gradle on Java 21 for 1.20.1 and 1.21.1,
+   Java 25 for 26.x), or all four with `./gradlew buildAll` from the root (the 8 loader jars land in `releases/`).
+   This also runs the unit tests.
 4. Update documentation when behavior, configuration, or release steps change.
 5. Open a pull request with a clear summary, verification notes, and any compatibility risks.
 

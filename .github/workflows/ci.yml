@@ -1,0 +1,90 @@
+# CI for Remnants Minimap (NightBeam convention; based on Bosses' publisher-checks.yml).
+# Builds all 8 jars (1.20.1 Fabric + Forge; 1.21.1, 26.2, 26.3 Fabric + NeoForge) with ./gradlew buildAll,
+# runs each workspace's unit tests (part of `build`: the Minecraft-free core/ code), checks that every workspace
+# has the same version= (and VERSION matches) and that the metadata ranges stay inside their Minecraft line, and
+# runs the publisher script tests (the same-day guard, and a dry run of scripts/upload_platforms.mjs, which reads
+# loader + Minecraft version from every jar name exactly as the upload step does).
+# It never publishes anything.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "1.20.1/**"
+      - "1.21.1/**"
+      - "26.2/**"
+      - "26.3/**"
+      - "scripts/**"
+      - "build.gradle"
+      - "settings.gradle"
+      - "gradle.properties"
+      - "gradle/**"
+      - "gradlew"
+      - "gradlew.bat"
+      - "VERSION"
+      - "releases/**"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Check publisher syntax
+        run: |
+          for f in scripts/*.mjs; do node --check "$f"; done
+      - name: Test publisher scripts (same-day guard)
+        run: node --test scripts/*.test.mjs
+      - name: Check the 8 targets, one version and metadata ranges
+        run: python3 scripts/check_targets.py workspaces
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # 21 stays JAVA_HOME (Gradle for 1.20.1/1.21.1); 17 is the 1.20.1 toolchain; the root build hands 26.x
+      # JAVA_HOME_25_X64.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            25
+            21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build all 8 jars and run the unit tests
+        run: |
+          chmod +x gradlew 1.20.1/gradlew 1.21.1/gradlew 26.2/gradlew 26.3/gradlew
+          ./gradlew buildAll --no-daemon
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check the 8 jars
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python3 scripts/check_targets.py version)"
+          # releases/ holds only what dist just copied (no jars are committed in this repo).
+          python3 scripts/check_targets.py jars --version "$version" --dir releases --list-file ci-jars.txt
+          mkdir -p ci-jars
+          xargs -a ci-jars.txt cp -f -t ci-jars/
+          # The upload step must be able to read loader + Minecraft version from every built jar name.
+          # Without tokens this dry run makes no network call.
+          node scripts/upload_platforms.mjs --version "$version" --jar-dir ci-jars --dry-run
+      - uses: actions/upload-artifact@v4
+        with:
+          name: remnantminimaps-jars
+          path: ci-jars/*.jar
+          if-no-files-found: error

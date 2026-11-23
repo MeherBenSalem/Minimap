@@ -1,1 +1,3 @@
-rootProject.name = 'remnant-minimap-all'
+// Root aggregator only: each Minecraft version folder is its own Gradle build with its own wrapper.
+// See build.gradle (buildAll, dist) and the NightBeam convention (exactly 8 loader jars per release).
+rootProject.name = 'remnantminimaps'

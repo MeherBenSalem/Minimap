@@ -1,127 +1,239 @@
-name: Publish
+# Publish Remnants Minimap to Modrinth + CurseForge (NightBeam convention).
+#
+# Runs only by hand (workflow_dispatch) or on a v*.*.* tag; a push to main never releases anything.
+# Uses exactly the 8 convention jars for the version, in this order of sources:
+#   1. releases/remnantminimaps-<loader>-<minecraft>-<version>.jar committed to the repo (none are today),
+#   2. the jars attached to the GitHub Release v<version>,
+#   3. a build from source: ./gradlew buildAll (the workspaces and VERSION must be at <version>).
+# The run fails unless all 8 are found: 1.20.1 Fabric + Forge; 1.21.1, 26.2 and 26.3 Fabric + NeoForge.
+# scripts/upload_platforms.mjs reads loader + Minecraft version from each jar name, uploads it with Fabric API as a
+# required dependency on Fabric, and takes the release notes from this version's section of CHANGELOG.md.
+#
+# Same-day guard (NightBeam convention): scripts/same_day_guard.mjs stops the run if this mod already had a
+# release today (Africa/Tunis day), on Modrinth, CurseForge or an earlier Publish run. A dry run only reports it.
+# It runs before building and again right before the upload, whatever the inputs below say.
+#
+# Repo secrets: MODRINTH_TOKEN, CURSEFORGE_TOKEN, CURSEFORGE_API_KEY
+# Repo variables: MODRINTH_ID (lLviL6Oq), CURSEFORGE_ID (1564458); the workflow falls back to these IDs if the variables are unset
+#
+# Prove it first:  gh workflow run publish.yml -f version=2.1.1 -f dry_run=true
+# Release:         gh workflow run publish.yml -f version=2.1.1   (or: git tag v2.1.1 && git push origin v2.1.1)
 
-# Builds every version root and loader, then uploads the jars to Modrinth and CurseForge.
-# Each version root is its own Gradle build with its own Java: 26.x on 25, 1.21.1 on 21, 1.20.1 on 17.
-# Runs on a version tag (v2.0.0) or by hand from the Actions tab.
-# Needs the repository secrets MODRINTH_TOKEN and CURSEFORGE_TOKEN.
+name: Publish
 
 on:
   push:
-    tags: ['v*']
+    tags:
+      - "v*.*.*"
   workflow_dispatch:
     inputs:
+      version:
+        description: Version (without v) when not tagging; matches jar names / GitHub Release
+        required: false
+      dry_run:
+        description: Skip uploads if true
+        type: choice
+        options: ["false", "true"]
+        default: "false"
       platforms:
-        description: Where to publish
+        description: "modrinth, curseforge, or both (the same-day guard still applies)"
         type: choice
         options: [both, modrinth, curseforge]
         default: both
-      dry_run:
-        description: Build and show what would be uploaded, without uploading
-        type: boolean
-        default: false
+      minecraft_version:
+        description: "Optional: upload only these Minecraft versions (comma-separated: 1.20.1, 1.21.1, 26.2, 26.3); the same-day guard still applies"
+        required: false
       sync_project:
-        description: Also update the Modrinth project page (description from CURSEFORGE.md and icon)
-        type: boolean
-        default: true
-      games:
-        description: Only publish these Minecraft versions (comma-separated, e.g. 1.21.1,1.20.1); empty publishes all
-        type: string
-        default: ''
+        description: "Also update the Modrinth title, summary, description and icon from marketing/ (always on for tags)"
+        type: choice
+        options: ["true", "false"]
+        default: "true"
 
-permissions:
-  contents: read
-
+# One Publish at a time per repo, so two runs can't both pass the same-day guard.
 concurrency:
-  group: publish
+  group: publish-${{ github.repository }}
   cancel-in-progress: false
 
 jobs:
-  build:
-    name: Build ${{ matrix.game }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - { game: '26.3', java: '25', loaders: 'fabric neoforge' }
-          - { game: '26.2', java: '25', loaders: 'fabric neoforge' }
-          - { game: '26.1.2', java: '25', loaders: 'fabric neoforge' }
-          - { game: '1.21.1', java: '21', loaders: 'fabric neoforge' }
-          - { game: '1.20.1', java: '17', loaders: 'fabric forge' }
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: ${{ matrix.java }}
-
-      - uses: gradle/actions/setup-gradle@v4
-
-      - name: Check version
-        run: |
-          file_version="$(tr -d '[:space:]' < VERSION)"
-          root_version="$(grep '^version=' '${{ matrix.game }}/gradle.properties' | cut -d= -f2 | tr -d '[:space:]')"
-          if [ "$file_version" != "$root_version" ]; then
-            echo "::error::VERSION ($file_version) and ${{ matrix.game }}/gradle.properties ($root_version) differ"; exit 1
-          fi
-          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME#v}" != "$file_version" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match VERSION $file_version"; exit 1
-          fi
-
-      - name: Build ${{ matrix.loaders }}
-        working-directory: ${{ matrix.game }}
-        run: bash ./gradlew build --no-daemon --stacktrace
-
-      - name: Collect jars
-        run: |
-          mkdir -p all-jars
-          for loader in ${{ matrix.loaders }}; do
-            find "${{ matrix.game }}/$loader/build/libs" -maxdepth 1 -name 'remnantminimaps-*.jar' \
-              ! -name '*-sources.jar' ! -name '*-javadoc.jar' -exec cp {} all-jars/ \;
-          done
-          ls -l all-jars
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: jars-${{ matrix.game }}
-          path: all-jars/*.jar
-          if-no-files-found: error
-
   publish:
-    name: Publish
-    needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: jars-*
-          path: all-jars
-          merge-multiple: true
+      - name: Resolve version
+        id: ver
+        shell: bash
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          elif [[ -n "$VERSION_INPUT" ]]; then
+            echo "version=${VERSION_INPUT#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "Provide a v*.*.* tag or workflow_dispatch version" >&2
+            exit 1
+          fi
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "20"
 
-      - name: Upload
+      - name: Test publisher scripts
+        run: node --test scripts/*.test.mjs
+
+      - name: Same-day guard
+        env:
+          MODRINTH_ID: ${{ vars.MODRINTH_ID || 'lLviL6Oq' }}
+          CURSEFORGE_ID: ${{ vars.CURSEFORGE_ID || '1564458' }}
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PUBLISH_WORKFLOW: publish.yml
+          UPLOAD_STEP: Upload Modrinth + CurseForge
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: node scripts/same_day_guard.mjs
+
+      - name: Find prebuilt release jars
+        id: prebuilt
+        shell: bash
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          # Only the 8 convention names are ever picked up; anything else for this version is ignored.
+          mapfile -t NAMES < <(python3 -c 'import sys; sys.path.insert(0, "scripts"); import check_targets as c; print("\n".join(sorted(c.expected_names(sys.argv[1]))))' "$VERSION")
+          found=0
+          for name in "${NAMES[@]}"; do
+            if [ -f "releases/$name" ]; then
+              cp -f "releases/$name" dist/
+              found=$((found + 1))
+            fi
+          done
+          if [ "$found" -gt 0 ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "Using $found prebuilt jar(s) from releases/"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No convention jars for ${VERSION} in releases/; will try the GitHub Release, then build from source"
+          fi
+
+      - name: Download GitHub release jars
+        id: ghrelease
+        if: steps.prebuilt.outputs.found != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          patterns=()
+          while IFS= read -r name; do patterns+=(--pattern "$name"); done < <(python3 -c 'import sys; sys.path.insert(0, "scripts"); import check_targets as c; print("\n".join(sorted(c.expected_names(sys.argv[1]))))' "$VERSION")
+          if gh release view "v${VERSION}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release download "v${VERSION}" --repo "${{ github.repository }}" --dir dist --clobber "${patterns[@]}" || true
+          fi
+          count=$(find dist -maxdepth 1 -name 'remnantminimaps-*.jar' | wc -l)
+          if [ "$count" -gt 0 ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "Using $count jar(s) from GitHub Release v${VERSION}"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No GitHub Release jars for v${VERSION}; building from source"
+          fi
+
+      # 21 stays JAVA_HOME (Gradle for 1.20.1/1.21.1); 17 is the 1.20.1 toolchain; the root build hands 26.x
+      # JAVA_HOME_25_X64.
+      - uses: actions/setup-java@v4
+        if: steps.prebuilt.outputs.found != 'true' && steps.ghrelease.outputs.found != 'true'
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            25
+            21
+
+      - uses: gradle/actions/setup-gradle@v4
+        if: steps.prebuilt.outputs.found != 'true' && steps.ghrelease.outputs.found != 'true'
+
+      - name: Build from source
+        if: steps.prebuilt.outputs.found != 'true' && steps.ghrelease.outputs.found != 'true'
+        shell: bash
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          # Also fails if VERSION differs from the workspaces.
+          python3 scripts/check_targets.py workspaces
+          ws_version="$(python3 scripts/check_targets.py version)"
+          if [ "$ws_version" != "$VERSION" ]; then
+            echo "::error::The workspaces are at ${ws_version}, not ${VERSION}. Bump them first (./gradlew syncVersion -PmodVersion=${VERSION})."
+            exit 1
+          fi
+          chmod +x gradlew 1.20.1/gradlew 1.21.1/gradlew 26.2/gradlew 26.3/gradlew
+          ./gradlew buildAll --no-daemon
+          python3 scripts/check_targets.py jars --version "$VERSION" --dir releases --list-file built-jars.txt
+          mkdir -p dist
+          xargs -a built-jars.txt cp -f -t dist/
+
+      - name: Verify release jars
+        shell: bash
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          MC_FILTER: ${{ inputs.minecraft_version }}
+          PLATFORMS: ${{ inputs.platforms || 'both' }}
+          SYNC_PROJECT: ${{ (github.event_name == 'push' || inputs.sync_project == 'true') && 'true' || 'false' }}
+        run: |
+          set -euo pipefail
+          # Exactly the 8 convention jars, one per loader + Minecraft pair, or the run stops here.
+          python3 scripts/check_targets.py jars --version "$VERSION" --dir dist --list-file jar-list.txt
+          # Preview what the upload step will send (no tokens here, so no network call).
+          args=(--version "$VERSION" --jar-dir dist --dry-run)
+          [ -n "$MC_FILTER" ] && args+=(--games "$MC_FILTER")
+          [ "$PLATFORMS" = "modrinth" ] && args+=(--modrinth-only)
+          [ "$PLATFORMS" = "curseforge" ] && args+=(--curseforge-only)
+          [ "$SYNC_PROJECT" = "true" ] && args+=(--sync-project)
+          node scripts/upload_platforms.mjs "${args[@]}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-release
+          path: dist/*.jar
+
+      - name: Same-day guard (again, right before upload)
+        if: ${{ inputs.dry_run != 'true' }}
+        env:
+          MODRINTH_ID: ${{ vars.MODRINTH_ID || 'lLviL6Oq' }}
+          CURSEFORGE_ID: ${{ vars.CURSEFORGE_ID || '1564458' }}
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          PUBLISH_WORKFLOW: publish.yml
+          UPLOAD_STEP: Upload Modrinth + CurseForge
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: node scripts/same_day_guard.mjs
+
+      - name: Upload Modrinth + CurseForge
+        if: ${{ inputs.dry_run != 'true' }}
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          MODRINTH_ID: ${{ vars.MODRINTH_ID || 'lLviL6Oq' }}
+          CURSEFORGE_ID: ${{ vars.CURSEFORGE_ID || '1564458' }}
+          VERSION: ${{ steps.ver.outputs.version }}
+          MC_FILTER: ${{ inputs.minecraft_version }}
           PLATFORMS: ${{ inputs.platforms || 'both' }}
-          DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
-          SYNC_PROJECT: ${{ (github.event_name == 'push' || inputs.sync_project) && 'true' || 'false' }}
-          GAMES: ${{ inputs.games || '' }}
+          SYNC_PROJECT: ${{ (github.event_name == 'push' || inputs.sync_project == 'true') && 'true' || 'false' }}
+        shell: bash
         run: |
-          version="$(tr -d '[:space:]' < VERSION)"
-          args=(--version "$version")
-          [ -n "$GAMES" ] && args+=(--games "$GAMES")
+          set -euo pipefail
+          test -n "${MODRINTH_ID:-}" && test -n "${CURSEFORGE_ID:-}"
+          args=(--version "$VERSION" --jar-dir dist)
+          [ -n "$MC_FILTER" ] && args+=(--games "$MC_FILTER")
           [ "$PLATFORMS" = "modrinth" ] && args+=(--modrinth-only)
           [ "$PLATFORMS" = "curseforge" ] && args+=(--curseforge-only)
-          [ "$DRY_RUN" = "true" ] && args+=(--dry-run)
           [ "$SYNC_PROJECT" = "true" ] && args+=(--sync-project)
-          ls -l all-jars
           node scripts/upload_platforms.mjs "${args[@]}"
