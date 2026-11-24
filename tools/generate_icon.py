@@ -5,7 +5,7 @@ engraved water) inside a gold ring, with the gold player arrow over a Site of Gr
 
 Usage: python tools/generate_icon.py
 Writes:
-  docs/icon.png                                                   512x512 (Modrinth / CurseForge logo)
+  docs/icon.png                                                   512x512 (CurseForge logo)
   26.3/common/src/main/resources/assets/remnantminimaps/icon.png    256x256 (in-mod logo)
   26.2/common/src/main/resources/assets/remnantminimaps/icon.png    256x256
   1.21.1/common/src/main/resources/assets/remnantminimaps/icon.png  256x256

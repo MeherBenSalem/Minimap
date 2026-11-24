@@ -121,20 +121,20 @@ live in `<workspace>/<loader>/runs/`. `build` also runs the unit tests of the Mi
 ## Releasing
 
 CI (`.github/workflows/ci.yml`) builds all 8 jars on every push to `main` that touches the build. Publishing to
-Modrinth and CurseForge is `.github/workflows/publish.yml`, run by hand (`version`, `dry_run`) or by a `v*.*.*` tag;
+CurseForge is `.github/workflows/publish.yml`, run by hand (`version`, `dry_run`) or by a `v*.*.*` tag;
 it never runs on a plain push. It refuses a second release of the mod on the same day (Africa/Tunis), takes the jars
 from `releases/`, the GitHub Release or a build from source, and fails unless exactly the 8 jars are found. It needs
-the secrets `MODRINTH_TOKEN`, `CURSEFORGE_TOKEN`, `CURSEFORGE_API_KEY` and the variables `MODRINTH_ID`,
-`CURSEFORGE_ID` (the workflow falls back to this project's IDs if the variables are unset).
+the secrets `CURSEFORGE_TOKEN` (upload token) and `CURSEFORGE_API_KEY` (Core API key) and the variable
+`CURSEFORGE_ID` (the workflow falls back to this project's ID if the variable is unset). NightBeam publishes to
+CurseForge only; the Modrinth page stays up but gets no new versions.
 
 1. Bump the version with `./gradlew syncVersion -PmodVersion=X.Y.Z` (writes `VERSION` and every workspace).
 2. Add a `# Remnants Minimap vX.Y.Z` section at the top of `CHANGELOG.md`; it becomes the release notes.
 3. Prove it with a dry run (`gh workflow run publish.yml -f version=X.Y.Z -f dry_run=true`), then push a tag
    `vX.Y.Z` or run the **Publish** workflow by hand.
 
-The workflow also refreshes the Modrinth project page from `marketing/modrinth/` and `marketing/images/icon.png`
-(always on tags; the `sync_project` option on manual runs). CurseForge has no API for the project description or
-logo, so paste `marketing/curseforge/description.md` there by hand.
+CurseForge has no API for the project description or logo, so paste `marketing/curseforge/description.md` there by
+hand.
 
 ## Contributing
 

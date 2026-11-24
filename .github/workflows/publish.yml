@@ -1,4 +1,4 @@
-# Publish Remnants Minimap to Modrinth + CurseForge (NightBeam convention).
+# Publish Remnants Minimap to CurseForge (NightBeam convention: CurseForge only since 24 Nov 2026).
 #
 # Runs only by hand (workflow_dispatch) or on a v*.*.* tag; a push to main never releases anything.
 # Uses exactly the 8 convention jars for the version, in this order of sources:
@@ -10,11 +10,12 @@
 # required dependency on Fabric, and takes the release notes from this version's section of CHANGELOG.md.
 #
 # Same-day guard (NightBeam convention): scripts/same_day_guard.mjs stops the run if this mod already had a
-# release today (Africa/Tunis day), on Modrinth, CurseForge or an earlier Publish run. A dry run only reports it.
+# release today (Africa/Tunis day), on CurseForge or in an earlier Publish run. A dry run only reports it.
 # It runs before building and again right before the upload, whatever the inputs below say.
 #
-# Repo secrets: MODRINTH_TOKEN, CURSEFORGE_TOKEN, CURSEFORGE_API_KEY
-# Repo variables: MODRINTH_ID (lLviL6Oq), CURSEFORGE_ID (1564458); the workflow falls back to these IDs if the variables are unset
+# Repo secrets: CURSEFORGE_TOKEN (upload token), CURSEFORGE_API_KEY (Core API key, for the same-day guard)
+# Repo variable: CURSEFORGE_ID (1564458); the workflow falls back to this ID if the variable is unset
+# The existing Modrinth project stays up as it is but gets no new versions.
 #
 # Prove it first:  gh workflow run publish.yml -f version=2.1.1 -f dry_run=true
 # Release:         gh workflow run publish.yml -f version=2.1.1   (or: git tag v2.1.1 && git push origin v2.1.1)
@@ -35,19 +36,9 @@ on:
         type: choice
         options: ["false", "true"]
         default: "false"
-      platforms:
-        description: "modrinth, curseforge, or both (the same-day guard still applies)"
-        type: choice
-        options: [both, modrinth, curseforge]
-        default: both
       minecraft_version:
         description: "Optional: upload only these Minecraft versions (comma-separated: 1.20.1, 1.21.1, 26.2, 26.3); the same-day guard still applies"
         required: false
-      sync_project:
-        description: "Also update the Modrinth title, summary, description and icon from marketing/ (always on for tags)"
-        type: choice
-        options: ["true", "false"]
-        default: "true"
 
 # One Publish at a time per repo, so two runs can't both pass the same-day guard.
 concurrency:
@@ -88,12 +79,11 @@ jobs:
 
       - name: Same-day guard
         env:
-          MODRINTH_ID: ${{ vars.MODRINTH_ID || 'lLviL6Oq' }}
           CURSEFORGE_ID: ${{ vars.CURSEFORGE_ID || '1564458' }}
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
           GITHUB_TOKEN: ${{ github.token }}
           PUBLISH_WORKFLOW: publish.yml
-          UPLOAD_STEP: Upload Modrinth + CurseForge
+          UPLOAD_STEP: Upload CurseForge|Upload Modrinth + CurseForge
           DRY_RUN: ${{ inputs.dry_run }}
         run: node scripts/same_day_guard.mjs
 
@@ -185,8 +175,6 @@ jobs:
         env:
           VERSION: ${{ steps.ver.outputs.version }}
           MC_FILTER: ${{ inputs.minecraft_version }}
-          PLATFORMS: ${{ inputs.platforms || 'both' }}
-          SYNC_PROJECT: ${{ (github.event_name == 'push' || inputs.sync_project == 'true') && 'true' || 'false' }}
         run: |
           set -euo pipefail
           # Exactly the 8 convention jars, one per loader + Minecraft pair, or the run stops here.
@@ -194,9 +182,6 @@ jobs:
           # Preview what the upload step will send (no tokens here, so no network call).
           args=(--version "$VERSION" --jar-dir dist --dry-run)
           [ -n "$MC_FILTER" ] && args+=(--games "$MC_FILTER")
-          [ "$PLATFORMS" = "modrinth" ] && args+=(--modrinth-only)
-          [ "$PLATFORMS" = "curseforge" ] && args+=(--curseforge-only)
-          [ "$SYNC_PROJECT" = "true" ] && args+=(--sync-project)
           node scripts/upload_platforms.mjs "${args[@]}"
 
       - uses: actions/upload-artifact@v4
@@ -207,33 +192,25 @@ jobs:
       - name: Same-day guard (again, right before upload)
         if: ${{ inputs.dry_run != 'true' }}
         env:
-          MODRINTH_ID: ${{ vars.MODRINTH_ID || 'lLviL6Oq' }}
           CURSEFORGE_ID: ${{ vars.CURSEFORGE_ID || '1564458' }}
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
           GITHUB_TOKEN: ${{ github.token }}
           PUBLISH_WORKFLOW: publish.yml
-          UPLOAD_STEP: Upload Modrinth + CurseForge
+          UPLOAD_STEP: Upload CurseForge|Upload Modrinth + CurseForge
           DRY_RUN: ${{ inputs.dry_run }}
         run: node scripts/same_day_guard.mjs
 
-      - name: Upload Modrinth + CurseForge
+      - name: Upload CurseForge
         if: ${{ inputs.dry_run != 'true' }}
         env:
-          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
-          MODRINTH_ID: ${{ vars.MODRINTH_ID || 'lLviL6Oq' }}
           CURSEFORGE_ID: ${{ vars.CURSEFORGE_ID || '1564458' }}
           VERSION: ${{ steps.ver.outputs.version }}
           MC_FILTER: ${{ inputs.minecraft_version }}
-          PLATFORMS: ${{ inputs.platforms || 'both' }}
-          SYNC_PROJECT: ${{ (github.event_name == 'push' || inputs.sync_project == 'true') && 'true' || 'false' }}
         shell: bash
         run: |
           set -euo pipefail
-          test -n "${MODRINTH_ID:-}" && test -n "${CURSEFORGE_ID:-}"
+          test -n "${CURSEFORGE_ID:-}" || { echo "Set the repo variable CURSEFORGE_ID" >&2; exit 1; }
           args=(--version "$VERSION" --jar-dir dist)
           [ -n "$MC_FILTER" ] && args+=(--games "$MC_FILTER")
-          [ "$PLATFORMS" = "modrinth" ] && args+=(--modrinth-only)
-          [ "$PLATFORMS" = "curseforge" ] && args+=(--curseforge-only)
-          [ "$SYNC_PROJECT" = "true" ] && args+=(--sync-project)
           node scripts/upload_platforms.mjs "${args[@]}"
